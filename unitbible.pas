@@ -54,6 +54,7 @@ type
     function GetRange(Verse: TVerse; raw: boolean = false): TStringArray;
     function GetAll(raw: boolean = false): TStringArray;
     function GoodLink(Verse: TVerse): boolean;
+    function NextVerse(Verse: TVerse; out Next: TVerse): boolean;
     function Search(searchString: string; Options: TSearchOptions; Range: TRange): TStringArray;
     procedure ShowTags;
     function GetTitles: TStringArray;
@@ -384,6 +385,33 @@ end;
 function TBible.GoodLink(Verse: TVerse): boolean;
 begin
   Result := not GetRange(Verse).IsEmpty;
+end;
+
+function TBible.NextVerse(Verse: TVerse; out Next: TVerse): boolean;
+var
+  i : integer;
+begin
+  Result := True;
+  Next := Verse;
+  Next.count := 1;
+
+  Next.number := Verse.number + Verse.count;       // next verse in chapter
+  if GoodLink(Next) then Exit;
+
+  Next.number := 1;                                // first verse of next chapter
+  Next.chapter := Verse.chapter + 1;
+  if GoodLink(Next) then Exit;
+
+  Next.chapter := 1;                               // first verse of next book
+  for i := 0 to Books.Count - 2 do
+    if Books[i].number = Verse.book then
+      begin
+        Next.book := Books[i+1].number;
+        if GoodLink(Next) then Exit;
+      end;
+
+  Next := Verse;
+  Result := False;
 end;
 
 function TBible.SortContent(const List: TStringArray): TStringArray;

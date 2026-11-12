@@ -74,13 +74,14 @@ object CopyForm: TCopyForm
       'Parentheses'
       'Link in the end'
       'Link in the new line'
+      'Translation name'
       'Plain text'
     )
     OnItemClick = CheckGroupItemClick
     ParentFont = False
     TabOrder = 3
     Data = {
-      0700000002020202020202
+      080000000202020202020202
     }
   end
   object ButtonCancel: TButton

@@ -7,7 +7,7 @@ uses SysUtils, Classes, Controls, Graphics, ClipBrd, LazUtf8, IniFiles, UnitLib,
 
 type
   TCopyOptions = record
-    cvAbbreviate, cvEnumerated, cvGuillemets, cvParentheses, cvEnd, cvBreak, cvPlain : boolean;
+    cvAbbreviate, cvEnumerated, cvGuillemets, cvParentheses, cvEnd, cvBreak, cvPlain, cvName : boolean;
   end;
 
   TTools = class
@@ -304,6 +304,7 @@ begin
 
   quote := Trim(quote);
   link := CurrBible.VerseToStr(CurrVerse, f and CopyOptions.cvAbbreviate);
+  if f and CopyOptions.cvName then link += ' ' + CurrBible.Name;
   link := '<l>' + link + '</l>';
 
   if f and CopyOptions.cvGuillemets then quote := '«' + quote + '»';

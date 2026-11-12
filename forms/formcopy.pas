@@ -46,7 +46,8 @@ const
   cgParentheses = 3;
   cgEnd         = 4;
   cgBreak       = 5;
-  cgPlain       = 6;
+  cgName        = 6;
+  cgPlain       = 7;
 
 {$R *.lfm}
 
@@ -68,7 +69,8 @@ begin
   CheckGroup.Items[cgGuillemets]  := T('Guillemets'      );
   CheckGroup.Items[cgParentheses] := T('Parentheses'     );
   CheckGroup.Items[cgEnd]         := T('Link in the end' );
-  CheckGroup.Items[cgBreak]       := T('Line Breaks'     ); {$ifndef linux}
+  CheckGroup.Items[cgBreak]       := T('Line Breaks'     );
+  CheckGroup.Items[cgName]        := T('Translation name'); {$ifndef linux}
   CheckGroup.Items[cgPlain]       := T('Plain text'      ); {$endif}
 
   CheckBox.Caption := T('Set Default');
@@ -89,7 +91,8 @@ begin
   CheckGroup.Checked[cgGuillemets]  := CopyOptions.cvGuillemets;
   CheckGroup.Checked[cgParentheses] := CopyOptions.cvParentheses;
   CheckGroup.Checked[cgEnd]         := CopyOptions.cvEnd;
-  CheckGroup.Checked[cgBreak]       := CopyOptions.cvBreak; {$ifndef linux}
+  CheckGroup.Checked[cgBreak]       := CopyOptions.cvBreak;
+  CheckGroup.Checked[cgName]        := CopyOptions.cvName; {$ifndef linux}
   CheckGroup.Checked[cgPlain]       := CopyOptions.cvPlain; {$endif}
 
   CheckBox.Checked:= False;
@@ -128,7 +131,8 @@ begin
   CopyOptions.cvGuillemets  := CheckGroup.Checked[cgGuillemets];
   CopyOptions.cvParentheses := CheckGroup.Checked[cgParentheses];
   CopyOptions.cvEnd         := CheckGroup.Checked[cgEnd];
-  CopyOptions.cvBreak       := CheckGroup.Checked[cgBreak]; {$ifndef linux}
+  CopyOptions.cvBreak       := CheckGroup.Checked[cgBreak];
+  CopyOptions.cvName        := CheckGroup.Checked[cgName]; {$ifndef linux}
   CopyOptions.cvPlain       := CheckGroup.Checked[cgPlain]; {$endif}
   LoadText;
   Repaint;

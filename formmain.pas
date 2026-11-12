@@ -872,6 +872,7 @@ begin
         begin
           CurrVerse := Verse;
           ShowCurrVerse(True);
+          if Memo = MemoCompare then LoadCompare; // stay on Compare tab
           Tools.AddHistory;
         end
       else
@@ -1356,9 +1357,14 @@ begin
 end;
 
 procedure TMainForm.LoadCompare;
-var text : string;
+var
+  text : string;
+  Next : TVerse;
 begin
-  text := CurrBible.VerseToStr(CurrVerse) + '<br> ';
+  text := CurrBible.VerseToStr(CurrVerse);
+  if CurrBible.NextVerse(CurrVerse, Next) then
+    text += '  <l>' + CurrBible.VerseToStr(Next) + '</l> »';
+  text += '<br> ';
   text += Tools.Get_Compare;
   MemoCompare.LoadText(text);
   SelectPage(apCompare);
@@ -1507,6 +1513,7 @@ begin
   IniFile.WriteBool('Copy', 'End', CopyOptions.cvEnd);
   IniFile.WriteBool('Copy', 'Break', CopyOptions.cvBreak);
   IniFile.WriteBool('Copy', 'Plain', CopyOptions.cvPlain);
+  IniFile.WriteBool('Copy', 'Name', CopyOptions.cvName);
   IniFile.WriteInteger('Recent', 'Count', RecentList.Count);
 
   for item in RecentList do
@@ -1538,6 +1545,7 @@ begin
   CopyOptions.cvEnd := IniFile.ReadBool('Copy', 'End', False);
   CopyOptions.cvBreak := IniFile.ReadBool('Copy', 'Break', False);
   CopyOptions.cvPlain := IniFile.ReadBool('Copy', 'Plain', False);
+  CopyOptions.cvName := IniFile.ReadBool('Copy', 'Name', False);
 
   Count := IniFile.ReadInteger('Recent', 'Count', RecentList.Count);
   for i := 0 to Count - 1 do
