@@ -17,7 +17,7 @@ unit UnitChrome;
 interface
 
 uses
-  Classes, SysUtils, Graphics, Controls, Forms, ComCtrls;
+  Classes, SysUtils, Graphics, Controls, Forms, ComCtrls, Menus;
 
 // enabled = False restores the system look.
 procedure ChromeUpdate(Form: TForm; Tabs: TPageControl; enabled: boolean;
@@ -26,12 +26,28 @@ procedure ChromeUpdate(Form: TForm; Tabs: TPageControl; enabled: boolean;
 // dark scroll bars for lists and memos
 procedure ChromeDarkScrollbars(Control: TWinControl; dark: boolean);
 
+// status bar with a simple text (Windows only); call after ChromeUpdate
+procedure ChromeStatusBar(Bar: TStatusBar);
+
+// title bar of any form (Windows only)
+procedure ChromeTitleBar(Form: TCustomForm; enabled: boolean; bar, barText: TColor);
+
+// Colors a form and the controls on it: surfaces (panels, group boxes, check boxes...) get the
+// chrome colors, edits / lists / combo boxes the field colors, labels the text color.
+// enabled = False restores the colors the controls had before they were first themed.
+procedure ChromeContainer(Root: TWinControl; enabled: boolean;
+  chrome, chromeText, field, fieldText: TColor);
+
+// Draws the entries of the drop-down menus of Menu with the theme colors (Windows only).
+// enabled = False gives them back to the system.
+procedure ChromeMenu(Menu: TMenu; enabled: boolean);
+
 implementation
 
-{$ifdef windows}
-
 uses
-  Windows, Messages, Menus;
+  LCLType, StdCtrls, ExtCtrls, LCLProc {$ifdef windows}, Windows, Messages {$endif};
+
+{$ifdef windows}
 
 const
   DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
@@ -98,6 +114,9 @@ var
   FormMenu : TMainMenu = nil;
   TabsWnd : HWND = 0;
   TabsOldProc : Pointer = nil;
+  StatusWnd : HWND = 0;
+  StatusOldProc : Pointer = nil;
+  StatusCtl : TStatusBar = nil;
 
 function Mix(a, b: COLORREF; percent: integer): COLORREF;
 begin
@@ -311,6 +330,54 @@ begin
 end;
 
 //------------------------------------------------------------------------------------------------
+//  status bar
+//------------------------------------------------------------------------------------------------
+
+procedure PaintStatus(h: HWND);
+var
+  ps : TPaintStruct;
+  dc : HDC;
+  rc, rt : TRect;
+  text : WideString;
+  oldFont : HFONT;
+  line : HBRUSH;
+begin
+  dc := BeginPaint(h, ps);
+  try
+    GetClientRect(h, rc);
+    FillRect(dc, rc, BarBrush);
+
+    line := CreateSolidBrush(Mix(BarColor, BarText, 30));
+    FillRect(dc, Classes.Rect(rc.Left, rc.Top, rc.Right, rc.Top + 1), line);
+    DeleteObject(line);
+
+    if Assigned(StatusCtl) then
+      begin
+        text := UTF8Decode(StatusCtl.SimpleText);
+        oldFont := SelectObject(dc, SendMessage(h, WM_GETFONT, 0, 0));
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, BarText);
+        rt := rc;
+        rt.Left := rt.Left + 2;
+        DrawTextW(dc, PWideChar(text), -1, rt, DT_SINGLELINE or DT_VCENTER or DT_END_ELLIPSIS or DT_NOPREFIX);
+        SelectObject(dc, oldFont);
+      end;
+  finally
+    EndPaint(h, ps);
+  end;
+end;
+
+function StatusProc(h: HWND; msg: UINT; wp: WPARAM; lp: LPARAM): LRESULT; stdcall;
+begin
+  if Themed and Assigned(StatusCtl) and StatusCtl.SimplePanel then
+    case msg of
+      WM_ERASEBKGND : Exit(1);
+      WM_PAINT      : begin PaintStatus(h); Exit(0); end;
+    end;
+  Result := CallWindowProcW(StatusOldProc, h, msg, wp, lp);
+end;
+
+//------------------------------------------------------------------------------------------------
 
 procedure Subclass(h: HWND; var oldHandle: HWND; var oldProc: Pointer; proc: Pointer);
 begin
@@ -319,11 +386,188 @@ begin
   oldProc := Pointer(SetWindowLongPtrW(h, GWL_WNDPROC, PtrInt(proc)));
 end;
 
-procedure ChromeUpdate(Form: TForm; Tabs: TPageControl; enabled: boolean;
-  bar, barText, selected, accent: TColor);
+procedure ChromeTitleBar(Form: TCustomForm; enabled: boolean; bar, barText: TColor);
 var
   dark : integer;
   caption, text : COLORREF;
+  b : COLORREF;
+begin
+  if not Form.HandleAllocated then Exit;
+  b := ColorToRGB(bar);
+
+  if enabled and IsDark(b) then dark := 1 else dark := 0;
+  DwmSetWindowAttribute(Form.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, @dark, SizeOf(dark));
+  if enabled then
+    begin
+      caption := b;
+      text := ColorToRGB(barText);
+    end
+  else
+    begin
+      caption := DWMWA_COLOR_DEFAULT;
+      text := DWMWA_COLOR_DEFAULT;
+    end;
+  DwmSetWindowAttribute(Form.Handle, DWMWA_CAPTION_COLOR, @caption, SizeOf(caption));
+  DwmSetWindowAttribute(Form.Handle, DWMWA_TEXT_COLOR, @text, SizeOf(text));
+end;
+
+//------------------------------------------------------------------------------------------------
+//  drop-down menus
+//------------------------------------------------------------------------------------------------
+
+type
+  TMenuPainter = class
+    procedure Draw(Sender: TObject; ACanvas: TCanvas; ARect: TRect; AState: LCLType.TOwnerDrawState);
+  end;
+
+var
+  Painter : TMenuPainter = nil;
+
+procedure TMenuPainter.Draw(Sender: TObject; ACanvas: TCanvas; ARect: TRect; AState: LCLType.TOwnerDrawState);
+var
+  Item : TMenuItem;
+  Menu : TMenu;
+  dc : HDC;
+  bg, fg : COLORREF;
+  brush : HBRUSH;
+  r : TRect;
+  text, shortcut : WideString;
+  ncm : TNonClientMetrics;
+  font, oldFont : HFONT;
+  gutter, dpi, rightSpace, mid : integer;
+  pen, oldPen : HPEN;
+  flags : UINT;
+begin
+  Item := Sender as TMenuItem;
+  dc := ACanvas.Handle;
+  dpi := GetDeviceCaps(dc, LOGPIXELSX);
+  if dpi = 0 then dpi := 96;
+
+  if (LCLType.odSelected in AState) and Item.Enabled and not Item.IsLine
+    then bg := Mix(BarColor, BarText, 22)
+    else bg := BarColor;
+  if Item.Enabled then fg := BarText else fg := Mix(bg, BarText, 45);
+
+  brush := CreateSolidBrush(bg);
+  FillRect(dc, ARect, brush);
+  DeleteObject(brush);
+
+  mid := (ARect.Top + ARect.Bottom) div 2;
+
+  if Item.IsLine then
+    begin
+      pen := CreatePen(PS_SOLID, 1, Mix(BarColor, BarText, 30));
+      oldPen := SelectObject(dc, pen);
+      MoveToEx(dc, ARect.Left + 6, mid, nil);
+      LineTo(dc, ARect.Right - 6, mid);
+      SelectObject(dc, oldPen);
+      DeleteObject(pen);
+      Exit;
+    end;
+
+  gutter := MulDiv(28, dpi, 96);
+
+  // icon, or a check mark
+  Menu := Item.GetParentMenu;
+  if Assigned(Menu) and Assigned(Menu.Images) and (Item.ImageIndex >= 0) and
+     (Item.ImageIndex < Menu.Images.Count) then
+    Menu.Images.Draw(ACanvas, ARect.Left + MulDiv(6, dpi, 96),
+      mid - Menu.Images.Height div 2, Item.ImageIndex, Item.Enabled)
+  else if Item.Checked then
+    begin
+      pen := CreatePen(PS_SOLID, 2, fg);
+      oldPen := SelectObject(dc, pen);
+      MoveToEx(dc, ARect.Left + 8, mid, nil);
+      LineTo(dc, ARect.Left + 12, mid + 4);
+      LineTo(dc, ARect.Left + 19, mid - 5);
+      SelectObject(dc, oldPen);
+      DeleteObject(pen);
+    end;
+
+  // text
+  FillChar(ncm, SizeOf(ncm), 0);
+  ncm.cbSize := SizeOf(ncm);
+  font := 0;
+  oldFont := 0;
+  if SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, SizeOf(ncm), @ncm, 0) then
+    begin
+      if Item.Default then ncm.lfMenuFont.lfWeight := FW_BOLD;
+      font := CreateFontIndirectW(ncm.lfMenuFont);
+      oldFont := SelectObject(dc, font);
+    end;
+
+  SetBkMode(dc, TRANSPARENT);
+  SetTextColor(dc, fg);
+
+  if Item.Count > 0 then rightSpace := MulDiv(22, dpi, 96) else rightSpace := MulDiv(14, dpi, 96);
+
+  r := ARect;
+  r.Left := r.Left + gutter;
+  r.Right := r.Right - rightSpace;
+
+  text := UTF8Decode(Item.Caption);
+  flags := DT_VCENTER or DT_SINGLELINE or DT_EXPANDTABS;
+  if LCLType.odNoAccel in AState then flags := flags or DT_HIDEPREFIX;
+  DrawTextW(dc, PWideChar(text), -1, r, flags);
+
+  if Item.ShortCut <> 0 then
+    begin
+      shortcut := UTF8Decode(ShortCutToText(Item.ShortCut));
+      DrawTextW(dc, PWideChar(shortcut), -1, r, DT_VCENTER or DT_SINGLELINE or DT_RIGHT);
+    end;
+
+  if font <> 0 then
+    begin
+      SelectObject(dc, oldFont);
+      DeleteObject(font);
+    end;
+
+  // arrow of a sub menu
+  if Item.Count > 0 then
+    begin
+      ACanvas.Brush.Color := TColor(fg);
+      ACanvas.Pen.Color := TColor(fg);
+      ACanvas.Polygon([Classes.Point(ARect.Right - MulDiv(14, dpi, 96), mid - 4),
+                       Classes.Point(ARect.Right - MulDiv(14, dpi, 96), mid + 4),
+                       Classes.Point(ARect.Right - MulDiv(9, dpi, 96), mid)]);
+    end;
+end;
+
+procedure HookItems(Parent: TMenuItem; enabled: boolean);
+var
+  i : integer;
+begin
+  for i := 0 to Parent.Count - 1 do
+    begin
+      if enabled then Parent[i].OnDrawItem := Painter.Draw
+                 else Parent[i].OnDrawItem := nil;
+      HookItems(Parent[i], enabled);
+    end;
+end;
+
+procedure ChromeMenu(Menu: TMenu; enabled: boolean);
+var
+  i : integer;
+begin
+  if Menu = nil then Exit;
+  if Painter = nil then Painter := TMenuPainter.Create;
+
+  for i := 0 to Menu.Items.Count - 1 do
+    begin
+      // the items of a menu bar are drawn by the form (see DrawBarItem), the others here
+      if not (Menu is TMainMenu) then
+        begin
+          if enabled then Menu.Items[i].OnDrawItem := Painter.Draw
+                     else Menu.Items[i].OnDrawItem := nil;
+        end;
+      HookItems(Menu.Items[i], enabled);
+    end;
+end;
+
+//------------------------------------------------------------------------------------------------
+
+procedure ChromeUpdate(Form: TForm; Tabs: TPageControl; enabled: boolean;
+  bar, barText, selected, accent: TColor);
 begin
   Themed := enabled;
   BarColor := ColorToRGB(bar);
@@ -338,21 +582,7 @@ begin
   if Assigned(Tabs) and Tabs.HandleAllocated then
     Subclass(Tabs.Handle, TabsWnd, TabsOldProc, @TabsProc);
 
-  // title bar
-  if enabled and IsDark(BarColor) then dark := 1 else dark := 0;
-  DwmSetWindowAttribute(Form.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, @dark, SizeOf(dark));
-  if enabled then
-    begin
-      caption := BarColor;
-      text := BarText;
-    end
-  else
-    begin
-      caption := DWMWA_COLOR_DEFAULT;
-      text := DWMWA_COLOR_DEFAULT;
-    end;
-  DwmSetWindowAttribute(Form.Handle, DWMWA_CAPTION_COLOR, @caption, SizeOf(caption));
-  DwmSetWindowAttribute(Form.Handle, DWMWA_TEXT_COLOR, @text, SizeOf(text));
+  ChromeTitleBar(Form, enabled, bar, barText);
 
   // repaint the menu bar, the frame and the tabs
   DrawMenuBar(Form.Handle);
@@ -366,8 +596,20 @@ end;
 procedure ChromeDarkScrollbars(Control: TWinControl; dark: boolean);
 begin
   if not Control.HandleAllocated then Exit;
-  if dark then SetWindowTheme(Control.Handle, 'DarkMode_Explorer', nil)
-          else SetWindowTheme(Control.Handle, nil, nil);
+  if dark then
+    begin
+      if Control is TCustomComboBox then SetWindowTheme(Control.Handle, 'DarkMode_CFD', nil)
+      else SetWindowTheme(Control.Handle, 'DarkMode_Explorer', nil);
+    end
+  else SetWindowTheme(Control.Handle, nil, nil);
+end;
+
+procedure ChromeStatusBar(Bar: TStatusBar);
+begin
+  if (Bar = nil) or not Bar.HandleAllocated then Exit;
+  StatusCtl := Bar;
+  Subclass(Bar.Handle, StatusWnd, StatusOldProc, @StatusProc);
+  InvalidateRect(Bar.Handle, nil, True);
 end;
 
 {$else}
@@ -381,6 +623,130 @@ procedure ChromeDarkScrollbars(Control: TWinControl; dark: boolean);
 begin
 end;
 
+procedure ChromeTitleBar(Form: TCustomForm; enabled: boolean; bar, barText: TColor);
+begin
+end;
+
+procedure ChromeMenu(Menu: TMenu; enabled: boolean);
+begin
+end;
+
+procedure ChromeStatusBar(Bar: TStatusBar);
+begin
+end;
+
 {$endif}
+
+//------------------------------------------------------------------------------------------------
+//  forms and their controls
+//------------------------------------------------------------------------------------------------
+
+type
+  TControlHack = class(TControl); // access to the protected Color / ParentColor / ParentFont
+
+  TOriginal = class
+    Color, FontColor : TColor;
+    ParentColor, ParentFont : boolean;
+  end;
+
+var
+  Originals : TStringList = nil;
+
+function IsDarkColor(c: TColor): boolean;
+var
+  rgb : longint;
+begin
+  rgb := ColorToRGB(c);
+  Result := (rgb and $FF) * 3 + ((rgb shr 8) and $FF) * 6 + ((rgb shr 16) and $FF) < 1280;
+end;
+
+function IsField(C: TControl): boolean;
+begin
+  Result := (C is TCustomEdit) or (C is TCustomComboBox) or (C is TCustomListBox) or
+            (C is TCustomMemo) or SameText(Copy(C.ClassName, Length(C.ClassName) - 3, 4), 'Memo');
+end;
+
+procedure ThemeControl(C: TControl; enabled: boolean; chrome, chromeText, field, fieldText: TColor);
+var
+  key : string;
+  i : integer;
+  Orig : TOriginal;
+begin
+  if C is TCustomButton then Exit; // native buttons keep their own look
+
+  if Originals = nil then
+    begin
+      Originals := TStringList.Create;
+      Originals.OwnsObjects := True;
+    end;
+
+  key := IntToHex(PtrUInt(C), 16);
+  i := Originals.IndexOf(key);
+  if i < 0 then
+    begin
+      if not enabled then Exit; // never themed, nothing to restore
+      Orig := TOriginal.Create;
+      Orig.Color := TControlHack(C).Color;
+      Orig.ParentColor := TControlHack(C).ParentColor;
+      Orig.FontColor := C.Font.Color;
+      Orig.ParentFont := TControlHack(C).ParentFont;
+      Originals.AddObject(key, Orig);
+    end
+  else
+    Orig := TOriginal(Originals.Objects[i]);
+
+  if enabled then
+    begin
+      if C is TCustomLabel then
+        C.Font.Color := chromeText
+      else if IsField(C) then
+        begin
+          TControlHack(C).Color := field;
+          C.Font.Color := fieldText;
+        end
+      else
+        begin
+          TControlHack(C).Color := chrome;
+          C.Font.Color := chromeText;
+        end;
+    end
+  else
+    begin
+      if not (C is TCustomLabel) then
+        begin
+          TControlHack(C).Color := Orig.Color;
+          TControlHack(C).ParentColor := Orig.ParentColor;
+        end;
+      C.Font.Color := Orig.FontColor;
+      TControlHack(C).ParentFont := Orig.ParentFont;
+    end;
+end;
+
+procedure ThemeChildren(Parent: TWinControl; enabled: boolean; chrome, chromeText, field, fieldText: TColor);
+var
+  i : integer;
+  C : TControl;
+begin
+  for i := 0 to Parent.ControlCount - 1 do
+    begin
+      C := Parent.Controls[i];
+      ThemeControl(C, enabled, chrome, chromeText, field, fieldText);
+      if (C is TWinControl) then
+        begin
+          if (C is TCustomButton) or (C is TCustomCheckBox) or (C is TCustomEdit) or (C is TCustomComboBox) then
+            ChromeDarkScrollbars(TWinControl(C), enabled and IsDarkColor(chrome));
+          ThemeChildren(TWinControl(C), enabled, chrome, chromeText, field, fieldText);
+        end;
+    end;
+end;
+
+procedure ChromeContainer(Root: TWinControl; enabled: boolean;
+  chrome, chromeText, field, fieldText: TColor);
+begin
+  if Root = nil then Exit;
+  ThemeControl(Root, enabled, chrome, chromeText, field, fieldText);
+  ThemeChildren(Root, enabled, chrome, chromeText, field, fieldText);
+  Root.Invalidate;
+end;
 
 end.

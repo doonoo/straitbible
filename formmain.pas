@@ -297,12 +297,14 @@ type
     GreyNotes : TStringList; // text of the collapsed notes of the chapter on screen
     procedure MemoBibleMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
     procedure HoverTimerTick(Sender: TObject);
+    procedure ActiveFormChanged(Sender: TObject);
     function ProcessNotes(const s: string; bible: boolean): string;
   public
     ThemeName : string;
     NoteMode : integer; // noteShow, noteHover or noteHide
     procedure Redraw;
     procedure ThemeWindow;
+    procedure ThemeForm(Form: TCustomForm);
     procedure AssignFont;
     procedure ApplyTheme(reload: boolean = True);
     procedure LocalizeApplication;
@@ -317,7 +319,7 @@ uses
   {$ifdef windows} UmParseWin, {$endif}
   FormAbout, FormNotify, FormSearch, FormOptions, FormCopy, FormShelf,
   UnitTools, UnitLocal, UnitModule, UnitBible, UnitCommentary, UnitDictionary,
-  UnitTheme, UnitFonts, UnitChrome;
+  UnitTheme, UnitFonts, UnitChrome, UnitChromeIcons;
 
 var
   TextColor : TColor = clWindowText;
@@ -377,6 +379,7 @@ begin
 end;
 
 var
+  ImagesOriginal : TImageList = nil; // the toolbar icons as they come, before they are lightened
   PopupColor, PopupMemoColor, PopupTitleColor : TColor;
   PopupSaved : boolean = False;
 
@@ -391,6 +394,8 @@ begin
       PopupTitleColor := NotifyForm.Title.Font.Color;
       PopupSaved := True;
     end;
+
+  if Assigned(NotifyForm.PopupMenu) then ChromeMenu(NotifyForm.PopupMenu, ThemeEnabled);
 
   if ThemeEnabled then
     begin
@@ -442,6 +447,7 @@ begin
   HoverTimer.Interval := 300;
   HoverTimer.OnTimer := HoverTimerTick;
   MemoBible.OnMouseMove := MemoBibleMouseMove;
+  Screen.OnActiveFormChange := ActiveFormChanged;
 
   LoadFonts; // bundled and user fonts, before the saved font is selected
   ReadConfig;
@@ -653,12 +659,14 @@ procedure TMainForm.ThemeWindow;
 var
   c : TColor;
   dark : boolean;
+  i : integer;
 begin
   c := ColorToRGB(TextBackground);
   dark := ThemeEnabled and (Red(c) * 3 + Green(c) * 6 + Blue(c) < 1280);
 
   ChromeUpdate(Self, PageControl, ThemeEnabled, Chrome, ChromeText, TextBackground, ThemeLink);
 
+  ChromeStatusBar(StatusBar);
   ChromeDarkScrollbars(BookBox, dark);
   ChromeDarkScrollbars(ChapterBox, dark);
   ChromeDarkScrollbars(ComboBox, dark);
@@ -670,6 +678,28 @@ begin
   ChromeDarkScrollbars(MemoCommentary, dark);
   ChromeDarkScrollbars(MemoDictionary, dark);
   ChromeDarkScrollbars(MemoHistory, dark);
+
+  // drop-down menus and icons
+  ChromeMenu(MainMenu, ThemeEnabled);
+  ChromeMenu(PopupMenu, ThemeEnabled);
+  ChromeMenu(PopupTabs, ThemeEnabled);
+  TintImages(Images, ImagesOriginal, dark, TextColor);
+  StandardToolBar.Invalidate;
+
+  // dialogs that already exist (the others are themed when they are shown)
+  for i := 0 to Screen.FormCount - 1 do ThemeForm(Screen.Forms[i]);
+end;
+
+procedure TMainForm.ThemeForm(Form: TCustomForm);
+begin
+  if (Form = nil) or (Form = Self) or (Form = NotifyForm) then Exit;
+  ChromeTitleBar(Form, ThemeEnabled, Chrome, ChromeText);
+  ChromeContainer(Form, ThemeEnabled, Chrome, ChromeText, TextBackground, TextColor);
+end;
+
+procedure TMainForm.ActiveFormChanged(Sender: TObject);
+begin
+  ThemeForm(Screen.ActiveForm);
 end;
 
 // Reloads what is on screen: colors and hidden footnotes are applied while the text is parsed.

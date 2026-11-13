@@ -26,7 +26,7 @@ Changes in this fork
 **Themes** (Tools → Options)
 - Built-in themes: *Light*, *Dark*, *Sepia*, *Solarized Dark* and *High Contrast*, plus *System default*.
 - *Customize theme...* opens a color editor (background, text, links, Strong's numbers, footnotes, words of Christ, notes, cross-references) and saves the result under a name you choose.
-- A theme colors the whole window: text areas, book and chapter lists, panels, toolbar, status bar, search box and the footnote / Strong's popup. On Windows the title bar (dark mode and caption color need Windows 10 2004 / Windows 11), the menu bar (Tools, Edit, Notes, Help), the tab headers and the scroll bars follow the theme too (`unitchrome.pas`). The drop-down menus keep the system colors. If a Windows call is not available the part simply keeps the system look. Other systems keep the system look for these parts.
+- A theme colors the whole window: text areas, book and chapter lists, panels, toolbar, status bar, search box and the footnote / Strong's popup. On Windows the title bar (dark mode and caption color need Windows 10 2004 / Windows 11), the menu bar (Tools, Edit, Notes, Help), the tab headers and the scroll bars follow the theme too (`unitchrome.pas`). The drop-down menus and the right-click menus are drawn in the theme colors, dark toolbar and menu icons are lightened on dark themes, and the other windows (Options, Copy Verses, Search, ...) are themed when they are shown. Native push buttons keep the system look. If a Windows call is not available the part simply keeps the system look. Other systems keep the system look for these parts.
 - Custom themes are plain `.ini` files in the `Themes` folder of the data directory and can also be written by hand:
 
 ```ini
