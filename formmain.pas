@@ -311,6 +311,9 @@ type
     procedure HighlightSet(Sender: TObject);
     procedure GoDailyVerse(Sender: TObject);
     procedure ReadingPlanClick(Sender: TObject);
+    procedure ShowMyVerses(highlights: boolean);
+    procedure ShowMyHighlights(Sender: TObject);
+    procedure ShowMyBookmarks(Sender: TObject);
     procedure BuildBookmarkMenu;
     procedure SaveBookmarks;
     procedure BookmarkAdd(Sender: TObject);
@@ -842,6 +845,9 @@ begin
 
   miBookmarks.Add(NewItem(T('Verse of the day'), 0, False, True, GoDailyVerse, 0, ''));
   miBookmarks.Add(NewItem(T('Reading plan') + '...', 0, False, True, ReadingPlanClick, 0, ''));
+  miBookmarks.Add(NewLine);
+  miBookmarks.Add(NewItem(T('My highlights'), 0, False, True, ShowMyHighlights, 0, ''));
+  miBookmarks.Add(NewItem(T('My bookmarks'), 0, False, True, ShowMyBookmarks, 0, ''));
 
   if BookmarkList.Count > 0 then
     begin
@@ -1064,6 +1070,85 @@ begin
   SaveHighlights;
 end;
 
+//----------------------------- lists of the highlights and bookmarks ----------------------------
+
+// Shows all highlighted verses (or all bookmarked verses) with their text, in the order of the Bible.
+// The references are links: a click opens the verse.
+procedure TMainForm.ShowMyVerses(highlights: boolean);
+var
+  Sorted : TStringList;
+  i, level : integer;
+  parts : TStringArray;
+  Verse : TVerse;
+  text, line : string;
+  colors : array [1..5] of string;
+begin
+  colors[1] := T('Yellow'); colors[2] := T('Green'); colors[3] := T('Blue');
+  colors[4] := T('Pink');   colors[5] := T('Orange');
+
+  Sorted := TStringList.Create;
+  try
+    if highlights then
+      begin
+        for i := 0 to HighlightList.Count - 1 do
+          begin
+            parts := HighlightList.Names[i].Split('|');
+            if parts.Count < 3 then Continue;
+            Sorted.Add(Format('%.3d%.3d%.3d', [ToInt(parts[0]), ToInt(parts[1]), ToInt(parts[2])]) +
+              '|' + HighlightList.Names[i] + '|' + HighlightList.ValueFromIndex[i]);
+          end;
+      end
+    else
+      begin
+        for i := 0 to BookmarkList.Count - 1 do
+          begin
+            parts := BookmarkList[i].Split('|');
+            if parts.Count < 3 then Continue;
+            Sorted.Add(Format('%.3d%.3d%.3d', [ToInt(parts[0]), ToInt(parts[1]), ToInt(parts[2])]) +
+              '|' + BookmarkList[i] + '|0');
+          end;
+      end;
+    Sorted.Sort;
+
+    text := '';
+    for line in Sorted do
+      begin
+        parts := line.Split('|'); // sort key, book, chapter, verse, color
+        if parts.Count < 5 then Continue;
+        Verse := ParseBookmark(parts[1] + '|' + parts[2] + '|' + parts[3]);
+        text += '<l>' + CurrBible.VerseToStr(Verse) + '</l> ';
+        if highlights then
+          begin
+            level := ToInt(parts[4]);
+            if (level >= 1) and (level <= 5) then text += '[' + colors[level] + '] ';
+          end;
+        text += ''.Join(' ', CurrBible.GetRange(Verse)) + '<br><br>';
+      end;
+
+    if text.IsEmpty then
+      begin
+        if highlights then text := T('There are no highlighted verses yet.')
+                      else text := T('There are no bookmarks yet.');
+      end;
+
+    MemoSearch.LoadText(text);
+    SelectPage(apSearch);
+    UpdateStatus(ToStr(Sorted.Count) + ' ' + T('verses'));
+  finally
+    Sorted.Free;
+  end;
+end;
+
+procedure TMainForm.ShowMyHighlights(Sender: TObject);
+begin
+  ShowMyVerses(True);
+end;
+
+procedure TMainForm.ShowMyBookmarks(Sender: TObject);
+begin
+  ShowMyVerses(False);
+end;
+
 procedure TMainForm.ToggleFullScreen;
 begin
   if WindowState = wsFullScreen then
@@ -1085,6 +1170,17 @@ begin
           Key := 0;
           Exit;
         end;
+
+  if (Shift = [ssCtrl]) and (Key = VK_G) then // go to a verse: type the reference and press Enter
+    begin
+      if ToolEdit.Visible then
+        begin
+          ToolEdit.SetFocus;
+          ToolEdit.SelectAll;
+        end;
+      Key := 0;
+      Exit;
+    end;
 
   if Shift = [] then
     begin

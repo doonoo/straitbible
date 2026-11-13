@@ -19,6 +19,9 @@ Changes in this fork
 - *Highlight verse* (Bookmarks menu, Ctrl+1 ... Ctrl+5, Ctrl+0 to remove) colors the selected verse(s) yellow, green, blue, pink or orange. Highlights are saved in `config.ini` and adapt to the theme so the text stays readable.
 - *Verse of the day* (Bookmarks menu) opens one of 76 well-known verses, the same all day. Options → *Show the verse of the day on startup* does it automatically.
 - *Reading plan...* (Bookmarks menu): the Bible in a year, about three chapters a day. Tick the chapters you have read, see your progress, jump to the next unread chapter, or restart the plan.
+- *My highlights* and *My bookmarks* (Bookmarks menu) list those verses with their text in the order of the Bible; a click on a reference opens the verse.
+- The reading plan can be the Bible in a year, the New Testament in 90 days, or Psalms and Proverbs in 60 days. Chapters marked as read count in every plan.
+- Ctrl+G: jump to the reference box (type for example `John 3:16` and press Enter).
 - Options → *Line spacing*: normal, relaxed, wide or double, for the Bible and Compare pages.
 - Settings (font, size, theme, ...) are written to `config.ini` as soon as they are changed.
 - Ctrl+Left / Ctrl+Right: previous / next chapter, across the books (not on the Notes page, where they move by word).
