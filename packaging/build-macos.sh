@@ -31,8 +31,14 @@ ls "$LAZDIR/lcl/interfaces" | head -40
 make -C "$LAZDIR/lcl/interfaces" LCL_PLATFORM=cocoa PP=fpc > "$ROOT/lcl-if.log" 2>&1 || { tail -40 "$ROOT/lcl-if.log"; exit 1; }
 tail -5 "$ROOT/lcl-if.log"
 echo "--- where are the Cocoa units?"
-find "$LAZDIR" -iname 'cocoawscommon*' | head
-ls "$LAZDIR/lcl/units/aarch64-darwin/cocoa" | head -20
+find -L "$LAZDIR" -iname '*wscommon*' | head
+echo "--- source files with Common in the name:"
+ls "$LAZDIR/lcl/interfaces/cocoa" | grep -i common
+echo "--- compiled units with Common in the name:"
+ls "$LAZDIR/lcl/units/aarch64-darwin/cocoa" | grep -i common
+echo "--- who uses a unit called WSCommon:"
+grep -il "cocoawscommon" "$LAZDIR"/lcl/interfaces/cocoa/*.pas | head
+echo "--- end of diagnostics"
 
 for lpk in \
     "$ZEOS/packages/lazarus/zcomponent.lpk" \
