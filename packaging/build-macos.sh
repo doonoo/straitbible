@@ -21,6 +21,13 @@ fi
 cd "$ROOT"
 mkdir -p "$PCP"
 
+LAZDIR="${LAZARUS_DIR:-/Applications/Lazarus}"
+
+# the Cocoa part of the LCL is not compiled in a fresh Lazarus: build it first
+for lpk in "$LAZDIR/lcl/lcl.lpk"; do
+  lazbuild $LAZ --pcp="$PCP" --ws=cocoa "$lpk"
+done
+
 for lpk in \
     "$ZEOS/packages/lazarus/zcomponent.lpk" \
     components/richmemo/richmemopackage.lpk \
