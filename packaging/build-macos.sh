@@ -24,8 +24,11 @@ mkdir -p "$PCP"
 LAZDIR="${LAZARUS_DIR:-/Applications/Lazarus}"
 
 # the Cocoa part of the LCL is not compiled in a fresh Lazarus: build it first
-make -C "$LAZDIR/lcl" LCL_PLATFORM=cocoa PP=fpc
-ls "$LAZDIR/lcl/units/"*/cocoa | head -5
+make -C "$LAZDIR/lcl" LCL_PLATFORM=cocoa PP=fpc > "$ROOT/lcl-make.log" 2>&1 || { tail -40 "$ROOT/lcl-make.log"; exit 1; }
+tail -5 "$ROOT/lcl-make.log"
+echo "--- where are the Cocoa units?"
+find "$LAZDIR" -iname 'cocoawscommon*' | head
+ls "$LAZDIR/lcl/units/" "$LAZDIR/lcl/units/"*/ | head -30
 
 for lpk in \
     "$ZEOS/packages/lazarus/zcomponent.lpk" \

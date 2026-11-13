@@ -78,8 +78,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache the Free Pascal and Lazarus downloads
-        uses: actions/cache@v4
+      - name: Restore the Free Pascal and Lazarus downloads
+        uses: actions/cache/restore@v4
         with:
           path: ~/dl
           key: macos-fpc324rc1a-laz48
@@ -103,6 +103,13 @@ jobs:
           echo "$RUNNER_TEMP/lazarus" >> "$GITHUB_PATH"
           sudo ln -sf "$RUNNER_TEMP/lazarus/lazbuild" /usr/local/bin/lazbuild
           fpc -iV
+
+      - name: Save the downloads for the next run
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/dl
+          key: macos-fpc324rc1a-laz48
 
       - name: Get ZeosLib 8.0 (7.2 does not know the field types of Free Pascal 3.2.4)
         run: |
