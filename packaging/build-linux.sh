@@ -19,6 +19,16 @@ if [ ! -f "$ZEOS/packages/lazarus/zcomponent.lpk" ]; then
   exit 1
 fi
 
+# the folder of Lazarus (where "lcl" is): LAZARUS_DIR, or the usual places
+LAZ=""
+if [ -n "$LAZARUS_DIR" ]; then
+  LAZ="--lazarusdir=$LAZARUS_DIR"
+else
+  for d in /usr/lib/lazarus /usr/lib/lazarus/* /usr/share/lazarus /usr/share/lazarus/*; do
+    if [ -d "$d/lcl" ]; then LAZ="--lazarusdir=$d"; break; fi
+  done
+fi
+
 cd "$ROOT"
 mkdir -p "$PCP"
 
@@ -26,9 +36,9 @@ for lpk in \
     "$ZEOS/packages/lazarus/zcomponent.lpk" \
     components/richmemo/richmemopackage.lpk \
     components/unboundmemo/unboundmemopackage.lpk; do
-  lazbuild --pcp="$PCP" --ws="$WS" --add-package-link "$lpk"
-  lazbuild --pcp="$PCP" --ws="$WS" "$lpk"
+  lazbuild $LAZ --pcp="$PCP" --ws="$WS" --add-package-link "$lpk"
+  lazbuild $LAZ --pcp="$PCP" --ws="$WS" "$lpk"
 done
 
-lazbuild --pcp="$PCP" --ws="$WS" straitbible.lpi
+lazbuild $LAZ --pcp="$PCP" --ws="$WS" straitbible.lpi
 echo "built: $ROOT/straitbible_linux"
