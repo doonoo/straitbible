@@ -1,11 +1,11 @@
 object CopyForm: TCopyForm
   Left = 738
-  Height = 319
+  Height = 349
   Top = 302
   Width = 557
   BorderStyle = bsDialog
   Caption = 'Copy Verses'
-  ClientHeight = 319
+  ClientHeight = 349
   ClientWidth = 557
   OnActivate = FormActivate
   OnClose = FormClose
@@ -51,7 +51,7 @@ object CopyForm: TCopyForm
   end
   object CheckGroup: TCheckGroup
     Left = 8
-    Height = 120
+    Height = 150
     Top = 192
     Width = 440
     AutoFill = True
@@ -64,7 +64,7 @@ object CopyForm: TCopyForm
     ChildSizing.ShrinkVertical = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 2
-    ClientHeight = 100
+    ClientHeight = 130
     ClientWidth = 436
     Columns = 2
     Items.Strings = (
@@ -75,13 +75,14 @@ object CopyForm: TCopyForm
       'Link in the end'
       'Link in the new line'
       'Translation name'
+      'Abbreviate translation name'
       'Plain text'
     )
     OnItemClick = CheckGroupItemClick
     ParentFont = False
     TabOrder = 3
     Data = {
-      080000000202020202020202
+      09000000020202020202020202
     }
   end
   object ButtonCancel: TButton
