@@ -14,6 +14,17 @@ Changes in this fork
 - *Translation name* option appends the translation name to the copied reference.
 - *Abbreviate translation name* option uses the translation's abbreviation instead (e.g. `NKJV`). Modules without an abbreviation of their own use their file name (`NKJV.SQLite3` gives `NKJV`).
 
+**Bookmarks and reading**
+- *Bookmarks* menu (between Notes and Help): *Add bookmark* (Ctrl+D) saves the current verse, the saved verses are listed in the menu and open when clicked, and *Remove* deletes one. Bookmarks are kept in the `[Bookmarks]` section of `config.ini`.
+- *Highlight verse* (Bookmarks menu, Ctrl+1 ... Ctrl+5, Ctrl+0 to remove) colors the selected verse(s) yellow, green, blue, pink or orange. Highlights are saved in `config.ini` and adapt to the theme so the text stays readable.
+- *Verse of the day* (Bookmarks menu) opens one of 76 well-known verses, the same all day. Options → *Show the verse of the day on startup* does it automatically.
+- *Reading plan...* (Bookmarks menu): the Bible in a year, about three chapters a day. Tick the chapters you have read, see your progress, jump to the next unread chapter, or restart the plan.
+- Options → *Line spacing*: normal, relaxed, wide or double, for the Bible and Compare pages.
+- Settings (font, size, theme, ...) are written to `config.ini` as soon as they are changed.
+- Ctrl+Left / Ctrl+Right: previous / next chapter, across the books (not on the Notes page, where they move by word).
+- Ctrl + mouse wheel over the text: bigger / smaller text. The size is remembered.
+- F11: full screen. F9: hide / show the list of books and chapters.
+
 **Fonts** (Tools → Options)
 - *Add font...* adds your own `.ttf` / `.otf` files. They are copied to the `Fonts` folder of the data directory and loaded on every start.
 - Any `.ttf` / `.otf` placed in `Fonts` (data directory) or in a `fonts` folder next to the program is loaded automatically, so a set of fonts can be shipped with the program.

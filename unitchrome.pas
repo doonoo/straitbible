@@ -718,7 +718,7 @@ begin
           TControlHack(C).ParentColor := Orig.ParentColor;
         end;
       C.Font.Color := Orig.FontColor;
-      TControlHack(C).ParentFont := Orig.ParentFont;
+      if not (C is TCustomForm) then TControlHack(C).ParentFont := Orig.ParentFont;
     end;
 end;
 

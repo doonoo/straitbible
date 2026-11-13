@@ -15,6 +15,9 @@ type
     ComboBoxTheme: TComboBox;
     ComboBoxNotes: TComboBox;
     LabelNotes: TLabel;
+    ComboBoxSpacing: TComboBox;
+    LabelSpacing: TLabel;
+    CheckDaily: TCheckBox;
     EditMax: TEdit;
     LabelHistory: TLabel;
     LabelTheme: TLabel;
@@ -25,6 +28,8 @@ type
     ComboBoxSize: TComboBox;
     ButtonClose: TButton;
     procedure ComboBoxNotesSelect(Sender: TObject);
+    procedure ComboBoxSpacingSelect(Sender: TObject);
+    procedure CheckDailyChange(Sender: TObject);
     procedure ButtonAddFontClick(Sender: TObject);
     procedure ButtonThemeClick(Sender: TObject);
     procedure ComboBoxThemeSelect(Sender: TObject);
@@ -41,6 +46,7 @@ type
     procedure MakeSizeList;
     procedure MakeThemeList;
     procedure MakeNoteList;
+    procedure MakeSpacingList;
   public
     procedure Localize;
   end;
@@ -61,6 +67,8 @@ begin
   MakeSizeList;
   MakeThemeList;
   MakeNoteList;
+  MakeSpacingList;
+  CheckDaily.Checked := MainForm.DailyVerse;
   EditMax.Text := Tools.HistoryMax.ToString;
 end;
 
@@ -71,6 +79,8 @@ begin
   LabelFont.Caption := T('Font');
   LabelTheme.Caption := T('Theme');
   LabelNotes.Caption := T('Grey notes');
+  LabelSpacing.Caption := T('Line spacing');
+  CheckDaily.Caption := T('Show the verse of the day on startup');
   ButtonAddFont.Caption := T('Add font') + '...';
   ButtonTheme.Caption := T('Customize theme') + '...';
   LabelHistory.Caption := T('Maximum verses in history');
@@ -81,12 +91,15 @@ procedure TOptionsForm.ComboBoxLangSelect(Sender: TObject);
 begin
   Localization.SelectLanguage(ComboBoxLang.Items[ComboBoxLang.ItemIndex]);
   MainForm.LocalizeApplication;
+  MainForm.SaveSettings;
 end;
 
 procedure TOptionsForm.ComboBoxFontSelect(Sender: TObject);
 begin
   MainForm.Font.Name := ComboBoxFont.Items[ComboBoxFont.ItemIndex];
   MainForm.AssignFont;
+  MainForm.Redraw;
+  MainForm.SaveSettings;
 end;
 
 procedure TOptionsForm.ButtonAddFontClick(Sender: TObject);
@@ -120,6 +133,7 @@ procedure TOptionsForm.ComboBoxThemeSelect(Sender: TObject);
 begin
   MainForm.ThemeName := ComboBoxTheme.Items[ComboBoxTheme.ItemIndex];
   MainForm.ApplyTheme;
+  MainForm.SaveSettings;
 end;
 
 procedure TOptionsForm.ButtonThemeClick(Sender: TObject);
@@ -135,6 +149,7 @@ begin
       MainForm.ThemeName := Theme.name;
       MakeThemeList;
       MainForm.ApplyTheme;
+      MainForm.SaveSettings;
     end;
 end;
 
@@ -151,6 +166,30 @@ procedure TOptionsForm.ComboBoxNotesSelect(Sender: TObject);
 begin
   MainForm.NoteMode := ComboBoxNotes.ItemIndex;
   MainForm.Redraw;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.MakeSpacingList;
+begin
+  ComboBoxSpacing.Items.Clear;
+  ComboBoxSpacing.Items.Add(T('Normal'));
+  ComboBoxSpacing.Items.Add(T('Relaxed'));
+  ComboBoxSpacing.Items.Add(T('Wide'));
+  ComboBoxSpacing.Items.Add(T('Double'));
+  ComboBoxSpacing.ItemIndex := MainForm.SpacingIndex;
+end;
+
+procedure TOptionsForm.ComboBoxSpacingSelect(Sender: TObject);
+begin
+  MainForm.SpacingIndex := ComboBoxSpacing.ItemIndex;
+  MainForm.Redraw;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.CheckDailyChange(Sender: TObject);
+begin
+  MainForm.DailyVerse := CheckDaily.Checked;
+  MainForm.SaveSettings;
 end;
 
 procedure TOptionsForm.MakeThemeList;
@@ -164,6 +203,8 @@ procedure TOptionsForm.ComboBoxSizeSelect(Sender: TObject);
 begin
   MainForm.Font.Size := ComboBoxSize.Items[ComboBoxSize.ItemIndex].ToInteger;
   MainForm.AssignFont;
+  MainForm.Redraw;
+  MainForm.SaveSettings;
 end;
 
 procedure TOptionsForm.EditMaxChange(Sender: TObject);

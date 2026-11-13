@@ -298,10 +298,37 @@ type
     procedure MemoBibleMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
     procedure HoverTimerTick(Sender: TObject);
     procedure ActiveFormChanged(Sender: TObject);
+  private
+    // bookmarks, shortcuts, zoom, full screen
+    miBookmarks : TMenuItem;
+    BookmarkList : TStringList; // "book|chapter|number"
+    HighlightList : TStringList; // "book|chapter|number=color" (color 1..5)
+    FullScreenPrevious : TWindowState;
+    procedure SaveHighlights;
+    procedure ApplyHighlight(number: integer);
+    procedure ApplyHighlights;
+    procedure ApplySpacing(Memo: TUnboundMemo);
+    procedure HighlightSet(Sender: TObject);
+    procedure GoDailyVerse(Sender: TObject);
+    procedure ReadingPlanClick(Sender: TObject);
+    procedure BuildBookmarkMenu;
+    procedure SaveBookmarks;
+    procedure BookmarkAdd(Sender: TObject);
+    procedure BookmarkGo(Sender: TObject);
+    procedure BookmarkRemove(Sender: TObject);
+    procedure GoChapter(delta: integer);
+    procedure ToggleFullScreen;
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure MemoWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer;
+      MousePos: TPoint; var Handled: Boolean);
     function ProcessNotes(const s: string; bible: boolean): string;
   public
     ThemeName : string;
     NoteMode : integer; // noteShow, noteHover or noteHide
+    SpacingIndex : integer;  // line spacing: 0 normal, 1 relaxed, 2 wide, 3 double
+    DailyVerse : boolean;    // go to the verse of the day when the program starts
+    procedure GoToChapter(book, chapter: integer);
+    procedure SaveSettings; // writes config.ini now (the font, theme... must survive a crash)
     procedure Redraw;
     procedure ThemeWindow;
     procedure ThemeForm(Form: TCustomForm);
@@ -319,7 +346,7 @@ uses
   {$ifdef windows} UmParseWin, {$endif}
   FormAbout, FormNotify, FormSearch, FormOptions, FormCopy, FormShelf,
   UnitTools, UnitLocal, UnitModule, UnitBible, UnitCommentary, UnitDictionary,
-  UnitTheme, UnitFonts, UnitChrome, UnitChromeIcons;
+  UnitTheme, UnitFonts, UnitChrome, UnitChromeIcons, UnitPlan, FormPlan;
 
 var
   TextColor : TColor = clWindowText;
@@ -327,6 +354,38 @@ var
   Chrome : TColor = clForm;        // window, panels and toolbar
   ChromeText : TColor = clDefault;
 
+
+const
+  SpacingValues : array [0..3] of double = (1.2, 1.4, 1.6, 2.0);
+
+  // highlight colors (BGR): yellow, green, blue, pink, orange
+  HighlightColors : array [1..5] of TColor = ($5CE4FF, $94D68F, $F0C87E, $C8A6F4, $6BB8FF);
+
+  // verses of the day, as book * 1000000 + chapter * 1000 + verse
+  DailyVerses : array [0..75] of integer = (
+    1001001, 1028015, 2014014, 5031006, 6001009, 9016007, 19023001, 19027001, 19034008, 19037004,
+    19046001, 19046010, 19091001, 19118024, 19119105, 19121002, 19139014, 20003005, 20016003, 20018010,
+    20022006, 21003001, 23026003, 23040031, 23041010, 23043002, 23053005, 24017007, 24029011, 25003022,
+    33006008, 34001007, 35003019, 36003017, 40005016, 40006033, 40007007, 40011028, 40028020, 41010027,
+    42001037, 43001001, 43003016, 43008012, 43010010, 43014006, 43014027, 43015005, 43016033, 44001008,
+    45005008, 45008028, 45008037, 45012002, 45015013, 46010013, 46013013, 47005017, 47012009, 48002020,
+    48005022, 49002008, 49006010, 50004006, 50004013, 51003023, 52005016, 55001007, 58011001, 58012001,
+    59001005, 60005007, 62004019, 66021004, 19100004, 20003006);
+
+function MixColors(a, b: TColor; percent: integer): TColor;
+begin
+  a := ColorToRGB(a);
+  b := ColorToRGB(b);
+  Result := RGBToColor(Red(a) + (Red(b) - Red(a)) * percent div 100,
+                       Green(a) + (Green(b) - Green(a)) * percent div 100,
+                       Blue(a) + (Blue(b) - Blue(a)) * percent div 100);
+end;
+
+function IsDarkBackground(c: TColor): boolean;
+begin
+  c := ColorToRGB(c);
+  Result := Red(c) * 3 + Green(c) * 6 + Blue(c) < 1280;
+end;
 
 type
   TControlHack = class(TControl); // gives access to the protected Color / ParentColor
@@ -374,7 +433,8 @@ begin
       TControlHack(Control).Color := Orig.Color;
       TControlHack(Control).ParentColor := Orig.ParentColor;
       Control.Font.Color := Orig.FontColor;
-      TControlHack(Control).ParentFont := Orig.ParentFont;
+      if not (Control is TCustomForm) then // the main form carries the font chosen in Options
+        TControlHack(Control).ParentFont := Orig.ParentFont;
     end;
 end;
 
@@ -449,6 +509,22 @@ begin
   MemoBible.OnMouseMove := MemoBibleMouseMove;
   Screen.OnActiveFormChange := ActiveFormChanged;
 
+  KeyPreview := True;
+  OnKeyDown := FormKeyDown;
+  MemoBible.OnMouseWheel := MemoWheel;
+  MemoCompare.OnMouseWheel := MemoWheel;
+  MemoCommentary.OnMouseWheel := MemoWheel;
+  MemoDictionary.OnMouseWheel := MemoWheel;
+  MemoReference.OnMouseWheel := MemoWheel;
+  MemoSearch.OnMouseWheel := MemoWheel;
+  MemoHistory.OnMouseWheel := MemoWheel;
+
+  BookmarkList := TStringList.Create;
+  HighlightList := TStringList.Create;
+  miBookmarks := TMenuItem.Create(Self);
+  miBookmarks.Caption := 'Bookmarks'; // translated later by Localize (T() is not ready yet)
+  MainMenu.Items.Insert(MainMenu.Items.IndexOf(miHelp), miBookmarks);
+
   LoadFonts; // bundled and user fonts, before the saved font is selected
   ReadConfig;
   ApplyTheme(False);
@@ -486,6 +562,8 @@ procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   SaveConfig;
   GreyNotes.Free;
+  BookmarkList.Free;
+  HighlightList.Free;
   Statuses.Free;
   Localization.Free;
 end;
@@ -507,6 +585,7 @@ procedure TMainForm.FormShow(Sender: TObject);
 begin
   if not showed then FirstAppearance;
   if not showed then ThemeWindow; // the window handle exists now
+  if not showed and DailyVerse then GoDailyVerse(nil);
   showed := True;
   {$ifdef windows} IdleMessage := 'HideCursor'; {$endif}
 end;
@@ -702,6 +781,352 @@ begin
   ThemeForm(Screen.ActiveForm);
 end;
 
+//-------------------------------------------------------------------------------------------------
+//                          Bookmarks, shortcuts, zoom and full screen
+//-------------------------------------------------------------------------------------------------
+
+function ParseBookmark(const s: string): TVerse;
+var
+  parts : TStringArray;
+begin
+  Result.Init;
+  parts := s.Split('|');
+  if parts.Count < 3 then Exit;
+  Result.book := ToInt(parts[0]);
+  Result.chapter := ToInt(parts[1]);
+  Result.number := ToInt(parts[2]);
+  Result.count := 1;
+end;
+
+procedure TMainForm.SaveBookmarks;
+var
+  IniFile : TIniFile;
+  i : integer;
+begin
+  IniFile := TIniFile.Create(ConfigFile);
+  try
+    IniFile.EraseSection('Bookmarks');
+    IniFile.WriteInteger('Bookmarks', 'Count', BookmarkList.Count);
+    for i := 0 to BookmarkList.Count - 1 do
+      IniFile.WriteString('Bookmarks', 'Item_' + ToStr(i), BookmarkList[i]);
+  finally
+    IniFile.Free;
+  end;
+end;
+
+procedure TMainForm.BuildBookmarkMenu;
+var
+  i : integer;
+  Item, Remove, Highlight : TMenuItem;
+  colors : array [1..5] of string;
+begin
+  if miBookmarks = nil then Exit;
+  miBookmarks.Clear;
+
+  miBookmarks.Add(NewItem(T('Add bookmark'), ShortCut(VK_D, [ssCtrl]), False, True, BookmarkAdd, 0, ''));
+
+  Highlight := TMenuItem.Create(miBookmarks);
+  Highlight.Caption := T('Highlight verse');
+  miBookmarks.Add(Highlight);
+  colors[1] := T('Yellow'); colors[2] := T('Green'); colors[3] := T('Blue');
+  colors[4] := T('Pink');   colors[5] := T('Orange');
+  for i := 1 to 5 do
+    begin
+      Item := NewItem(colors[i] + '  (Ctrl+' + ToStr(i) + ')', ShortCut(Ord('0') + i, [ssCtrl]), False, True, HighlightSet, 0, '');
+      Item.Tag := i;
+      Highlight.Add(Item);
+    end;
+  Item := NewItem(T('Remove highlight') + '  (Ctrl+0)', ShortCut(Ord('0'), [ssCtrl]), False, True, HighlightSet, 0, '');
+  Item.Tag := 0;
+  Highlight.Add(Item);
+
+  miBookmarks.Add(NewItem(T('Verse of the day'), 0, False, True, GoDailyVerse, 0, ''));
+  miBookmarks.Add(NewItem(T('Reading plan') + '...', 0, False, True, ReadingPlanClick, 0, ''));
+
+  if BookmarkList.Count > 0 then
+    begin
+      miBookmarks.Add(NewLine);
+
+      for i := 0 to BookmarkList.Count - 1 do
+        begin
+          Item := NewItem(CurrBible.VerseToStr(ParseBookmark(BookmarkList[i])), 0, False, True, BookmarkGo, 0, '');
+          Item.Tag := i;
+          miBookmarks.Add(Item);
+        end;
+
+      miBookmarks.Add(NewLine);
+
+      Remove := TMenuItem.Create(miBookmarks);
+      Remove.Caption := T('Remove');
+      miBookmarks.Add(Remove);
+      for i := 0 to BookmarkList.Count - 1 do
+        begin
+          Item := NewItem(CurrBible.VerseToStr(ParseBookmark(BookmarkList[i])), 0, False, True, BookmarkRemove, 0, '');
+          Item.Tag := i;
+          Remove.Add(Item);
+        end;
+    end;
+
+  ChromeMenu(MainMenu, ThemeEnabled); // the new items need the themed drawing as well
+end;
+
+procedure TMainForm.BookmarkAdd(Sender: TObject);
+var
+  key : string;
+begin
+  key := ToStr(CurrVerse.book) + '|' + ToStr(CurrVerse.chapter) + '|' + ToStr(CurrVerse.number);
+  if BookmarkList.IndexOf(key) >= 0 then Exit;
+  BookmarkList.Add(key);
+  SaveBookmarks;
+  BuildBookmarkMenu;
+  UpdateStatus(T('Bookmark added') + ': ' + CurrBible.VerseToStr(CurrVerse));
+end;
+
+procedure TMainForm.BookmarkGo(Sender: TObject);
+var
+  Verse : TVerse;
+begin
+  Verse := ParseBookmark(BookmarkList[(Sender as TMenuItem).Tag]);
+  if not CurrBible.GoodLink(Verse) then Exit;
+  CurrVerse := Verse;
+  ShowCurrVerse(True);
+  Tools.AddHistory;
+end;
+
+procedure TMainForm.BookmarkRemove(Sender: TObject);
+begin
+  BookmarkList.Delete((Sender as TMenuItem).Tag);
+  SaveBookmarks;
+  BuildBookmarkMenu;
+end;
+
+// next (delta = 1) or previous (delta = -1) chapter, across the books
+procedure TMainForm.GoChapter(delta: integer);
+var
+  Verse, Target : TVerse;
+begin
+  Verse := CurrVerse;
+  Verse.count := 1;
+
+  if delta > 0 then
+    begin
+      Verse.number := CurrBible.VersesCount(Verse);
+      if not CurrBible.NextVerse(Verse, Target) then Exit;
+    end
+  else
+    begin
+      Verse.number := 1;
+      if not CurrBible.PrevVerse(Verse, Target) then Exit;
+    end;
+
+  CurrVerse := Target;
+  CurrVerse.number := 1;
+  CurrVerse.count := 1;
+  ShowCurrVerse(False);
+  Tools.AddHistory;
+end;
+
+procedure TMainForm.GoToChapter(book, chapter: integer);
+var
+  Verse : TVerse;
+begin
+  Verse.Init;
+  Verse.book := book;
+  Verse.chapter := chapter;
+  Verse.number := 1;
+  Verse.count := 1;
+  if not CurrBible.GoodLink(Verse) then Exit;
+  CurrVerse := Verse;
+  ShowCurrVerse(False);
+  Tools.AddHistory;
+end;
+
+// verse of the day: one of a list of well-known verses, the same all day
+procedure TMainForm.GoDailyVerse(Sender: TObject);
+var
+  code : integer;
+  Verse : TVerse;
+begin
+  code := DailyVerses[Trunc(Date) mod Length(DailyVerses)];
+  Verse.Init;
+  Verse.book := code div 1000000;
+  Verse.chapter := (code div 1000) mod 1000;
+  Verse.number := code mod 1000;
+  Verse.count := 1;
+  if not CurrBible.GoodLink(Verse) then Exit;
+  CurrVerse := Verse;
+  ShowCurrVerse(True);
+  Tools.AddHistory;
+end;
+
+procedure TMainForm.ReadingPlanClick(Sender: TObject);
+begin
+  ShowReadingPlan;
+end;
+
+//---------------------------------------- line spacing ------------------------------------------
+
+procedure TMainForm.ApplySpacing(Memo: TUnboundMemo);
+var
+  m : TParaMetric;
+begin
+  if (SpacingIndex < 1) or (SpacingIndex > High(SpacingValues)) then Exit;
+  InitParaMetric(m);
+  m.LineSpacing := SpacingValues[SpacingIndex];
+  Memo.SetRangeParaParams(0, Length(Memo.Text), [pmm_LineSpacing], m);
+end;
+
+//----------------------------------------- highlights -------------------------------------------
+
+procedure TMainForm.SaveHighlights;
+var
+  IniFile : TIniFile;
+  i : integer;
+begin
+  IniFile := TIniFile.Create(ConfigFile);
+  try
+    IniFile.EraseSection('Highlights');
+    IniFile.WriteInteger('Highlights', 'Count', HighlightList.Count);
+    for i := 0 to HighlightList.Count - 1 do
+      IniFile.WriteString('Highlights', 'Item_' + ToStr(i), HighlightList.Names[i] + '|' + HighlightList.ValueFromIndex[i]);
+  finally
+    IniFile.Free;
+  end;
+end;
+
+// Paints (or clears) the background of one verse of the chapter on screen.
+procedure TMainForm.ApplyHighlight(number: integer);
+var
+  key : string;
+  i, x, level : integer;
+  p : TParaRange;
+  fp : TFontParams;
+begin
+  key := ToStr(CurrVerse.book) + '|' + ToStr(CurrVerse.chapter) + '|' + ToStr(number);
+  i := HighlightList.IndexOfName(key);
+
+  x := UTF8Pos(LineBreak + ' ' + ToStr(number) + ' ', MemoBible.Text);
+  if (x = 0) and (number <> 1) then Exit;
+  if not MemoBible.GetParaRange(x, p) then Exit;
+  if not MemoBible.GetTextAttributes(p.start, fp) then Exit;
+
+  if i >= 0 then
+    begin
+      level := ToInt(HighlightList.ValueFromIndex[i]);
+      if (level < 1) or (level > 5) then Exit;
+      fp.HasBkClr := True;
+      // a tint of the color, so that the text keeps its contrast on dark and light themes
+      if IsDarkBackground(TextBackground)
+        then fp.BkColor := MixColors(TextBackground, HighlightColors[level], 30)
+        else fp.BkColor := MixColors(TextBackground, HighlightColors[level], 65);
+    end
+  else
+    fp.HasBkClr := False;
+
+  MemoBible.SetRangeParams(p.start, p.length, [tmm_BackColor], fp, [], []);
+end;
+
+// all highlights of the chapter that has just been loaded
+procedure TMainForm.ApplyHighlights;
+var
+  i : integer;
+  parts : TStringArray;
+begin
+  for i := 0 to HighlightList.Count - 1 do
+    begin
+      parts := HighlightList.Names[i].Split('|');
+      if parts.Count < 3 then Continue;
+      if (ToInt(parts[0]) = CurrVerse.book) and (ToInt(parts[1]) = CurrVerse.chapter) then
+        ApplyHighlight(ToInt(parts[2]));
+    end;
+end;
+
+// Tag 1..5 highlights the selected verses in that color, tag 0 removes the highlight.
+procedure TMainForm.HighlightSet(Sender: TObject);
+var
+  n, count, tag : integer;
+  key : string;
+  i : integer;
+begin
+  tag := (Sender as TMenuItem).Tag;
+  count := CurrVerse.count;
+  if count < 1 then count := 1;
+
+  for n := CurrVerse.number to CurrVerse.number + count - 1 do
+    begin
+      key := ToStr(CurrVerse.book) + '|' + ToStr(CurrVerse.chapter) + '|' + ToStr(n);
+      i := HighlightList.IndexOfName(key);
+      if i >= 0 then HighlightList.Delete(i);
+      if tag > 0 then HighlightList.Values[key] := ToStr(tag);
+      ApplyHighlight(n);
+    end;
+
+  SaveHighlights;
+end;
+
+procedure TMainForm.ToggleFullScreen;
+begin
+  if WindowState = wsFullScreen then
+    WindowState := FullScreenPrevious
+  else
+    begin
+      FullScreenPrevious := WindowState;
+      WindowState := wsFullScreen;
+    end;
+end;
+
+procedure TMainForm.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Shift = [ssCtrl] then
+    if (Key = VK_LEFT) or (Key = VK_RIGHT) then
+      if (PageControl.ActivePageIndex <> apNotes) and not ToolEdit.Focused then
+        begin
+          if Key = VK_RIGHT then GoChapter(1) else GoChapter(-1);
+          Key := 0;
+          Exit;
+        end;
+
+  if Shift = [] then
+    begin
+      if Key = VK_F11 then
+        begin
+          ToggleFullScreen;
+          Key := 0;
+        end;
+      if Key = VK_F9 then // hide / show the books and chapters
+        begin
+          PanelLeft.Visible := not PanelLeft.Visible;
+          Splitter1.Visible := PanelLeft.Visible;
+          Key := 0;
+        end;
+    end;
+end;
+
+// Ctrl + mouse wheel changes the size of the text
+procedure TMainForm.MemoWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer;
+  MousePos: TPoint; var Handled: Boolean);
+var
+  size : integer;
+begin
+  if not (ssCtrl in Shift) then Exit;
+  Handled := True;
+
+  size := Font.Size;
+  if WheelDelta > 0 then size += 1 else size -= 1;
+  if size < 8 then size := 8;
+  if size > 48 then size := 48;
+  if size = Font.Size then Exit;
+
+  Font.Size := size;
+  AssignFont;
+  Redraw;
+end;
+
+procedure TMainForm.SaveSettings;
+begin
+  try SaveConfig; except end;
+end;
+
 // Reloads what is on screen: colors and hidden footnotes are applied while the text is parsed.
 procedure TMainForm.Redraw;
 begin
@@ -712,6 +1137,12 @@ end;
 
 procedure TMainForm.Localize;
 begin
+  if Assigned(miBookmarks) then
+    begin
+      miBookmarks.Caption := T('Bookmarks');
+      BuildBookmarkMenu;
+    end;
+
   miBibleFolder.Caption := T('Bible Folder');
   miClear.Caption := T('Delete');
   miCommentaries.Caption := T('Commentaries');
@@ -1278,6 +1709,7 @@ begin
     ShowCurrVerse(select);
   {$endif}
   UpdateStatus(CurrBible.Info);
+  BuildBookmarkMenu; // the names of the books depend on the translation
 end;
 
 function TMainForm.CheckFileSave: boolean;
@@ -1596,6 +2028,8 @@ end;
 procedure TMainForm.LoadChapter;
 begin
   MemoBible.LoadText(ProcessNotes(Tools.Get_Chapter, True), true);
+  ApplySpacing(MemoBible);
+  ApplyHighlights;
   SelectPage(apBible);
 end;
 
@@ -1638,6 +2072,7 @@ begin
   text += '<br> ';
   text += ProcessNotes(Tools.Get_Compare, False);
   MemoCompare.LoadText(text);
+  ApplySpacing(MemoCompare);
   SelectPage(apCompare);
 end;
 
@@ -1877,6 +2312,9 @@ begin
   IniFile.WriteInteger('Application', 'FontSize', Font.Size);
   IniFile.WriteString ('Application', 'Theme', ThemeName);
   IniFile.WriteInteger('Application', 'GreyNotes', NoteMode);
+  IniFile.WriteInteger('Application', 'LineSpacing', SpacingIndex);
+  IniFile.WriteBool   ('Application', 'DailyVerse', DailyVerse);
+  PlanSave(IniFile);
   IniFile.WriteBool('Copy', 'Abbreviate', CopyOptions.cvAbbreviate);
   IniFile.WriteBool('Copy', 'Enumerated', CopyOptions.cvEnumerated);
   IniFile.WriteBool('Copy', 'Guillemets', CopyOptions.cvGuillemets);
@@ -1898,6 +2336,7 @@ procedure TMainForm.ReadConfig;
 var
   IniFile : TIniFile;
   i, Count : integer;
+  parts : TStringArray;
 begin
   IniFile := TIniFile.Create(ConfigFile);
 
@@ -1912,6 +2351,9 @@ begin
   Font.Size := IniFile.ReadInteger('Application', 'FontSize', Font.Size);
   ThemeName := IniFile.ReadString ('Application', 'Theme', SystemThemeName);
   NoteMode := IniFile.ReadInteger('Application', 'GreyNotes', noteShow);
+  SpacingIndex := IniFile.ReadInteger('Application', 'LineSpacing', 0);
+  DailyVerse := IniFile.ReadBool('Application', 'DailyVerse', False);
+  PlanLoad(IniFile);
   CopyOptions.cvAbbreviate := IniFile.ReadBool('Copy', 'Abbreviate', False);
   CopyOptions.cvEnumerated := IniFile.ReadBool('Copy', 'Enumerated', False);
   CopyOptions.cvGuillemets := IniFile.ReadBool('Copy', 'Guillemets', False);
@@ -1925,6 +2367,19 @@ begin
   Count := IniFile.ReadInteger('Recent', 'Count', RecentList.Count);
   for i := 0 to Count - 1 do
     RecentList.Add(IniFile.ReadString('Recent', 'File_' + ToStr(i), ''));
+
+  Count := IniFile.ReadInteger('Highlights', 'Count', 0);
+  for i := 0 to Count - 1 do
+    begin
+      parts := IniFile.ReadString('Highlights', 'Item_' + ToStr(i), '').Split('|');
+      if parts.Count = 4 then
+        HighlightList.Values[parts[0] + '|' + parts[1] + '|' + parts[2]] := parts[3];
+    end;
+
+  Count := IniFile.ReadInteger('Bookmarks', 'Count', 0);
+  for i := 0 to Count - 1 do
+    if not IniFile.ReadString('Bookmarks', 'Item_' + ToStr(i), '').IsEmpty then
+      BookmarkList.Add(IniFile.ReadString('Bookmarks', 'Item_' + ToStr(i), ''));
 
   IniFile.Free;
 end;
