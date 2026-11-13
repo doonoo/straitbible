@@ -88,8 +88,18 @@ jobs:
         run: |
           mkdir -p ~/dl
           # SourceForge is sometimes very slow: give up and retry instead of hanging for hours
-          [ -s ~/dl/fpc.dmg ] || curl -fL --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o ~/dl/fpc.dmg "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg/download"
-          [ -s ~/dl/lazarus.zip ] || curl -fL --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o ~/dl/lazarus.zip "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20aarch64/Lazarus%204.8/lazarus-darwin-aarch64-4.8.zip/download"
+          # downloaded to .part and resumed (-C -), moved into place only when complete, so a cache never keeps half a file
+          for f in "fpc.dmg|Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg" "lazarus.zip|Lazarus%20macOS%20aarch64/Lazarus%204.8/lazarus-darwin-aarch64-4.8.zip"; do
+            name=${f%%|*}; path=${f#*|}
+            if [ ! -s ~/dl/$name ]; then
+              n=0
+              until curl -fL -C - --connect-timeout 30 --max-time 900 --silent --show-error -o ~/dl/$name.part "https://sourceforge.net/projects/lazarus/files/$path/download"; do
+                n=$((n+1)); [ $n -ge 6 ] && exit 1
+                echo "retry $n"
+              done
+              mv ~/dl/$name.part ~/dl/$name
+            fi
+          done
           cp ~/dl/fpc.dmg "$RUNNER_TEMP/fpc.dmg"
           cp ~/dl/lazarus.zip "$RUNNER_TEMP/lazarus.zip"
           sudo hdiutil attach "$RUNNER_TEMP/fpc.dmg"
