@@ -5,11 +5,11 @@
 
 pkgname=straitbible-git
 _pkgname=straitbible
-pkgver=5.4.r0.g0000000
+pkgver=6.0.r0.g0000000
 pkgrel=1
 pkgdesc='Free multilingual Bible reader (based on Unbound Bible)'
 arch=('x86_64')
-url='https://github.com/doonoo/unboundbible'
+url='https://github.com/doonoo/straitbible'
 license=('GPL3')
 depends=('gtk2' 'sqlite' 'hicolor-icon-theme')
 makedepends=('git' 'fpc' 'lazarus')
@@ -22,7 +22,7 @@ sha256sums=('SKIP'
 
 pkgver() {
   cd "$srcdir/$_pkgname"
-  printf '5.4.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  printf '6.0.r%s.g%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {

@@ -4,10 +4,10 @@
 #define MyAppName "Strait Bible"
 #define MyAppCopyright "GNU GPL"
 #define MyAppPublisher "Strait Bible contributors (based on Unbound Bible by Vladimir Rybant)"
-#define MyAppURL "https://github.com/doonoo/unboundbible"
+#define MyAppURL "https://github.com/doonoo/straitbible"
 #define MyAppExeName "straitbible.exe"
-#define MyAppVersion "5.4"
-#define MyAppOutput "straitbible_5.4"
+#define MyAppVersion "6.0"
+#define MyAppOutput "straitbible_6.0"
 
 [Setup]
  AppName={#MyAppName}

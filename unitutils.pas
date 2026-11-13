@@ -9,9 +9,9 @@ const
   ApplicationName = 'Strait Bible';
   LegacyName = 'Unbound Bible';   // the name of the program this one is based on (see README);
                                   // a folder with this name that already exists keeps being used
-  ProjectURL = 'https://github.com/doonoo/unboundbible';
+  ProjectURL = 'https://github.com/doonoo/straitbible';
   OriginalURL = 'https://github.com/vrybant/unboundbible';
-  ApplicationVersion = '5.4';
+  ApplicationVersion = '6.0';
   LangDirectory = 'localization';
   Untitled = 'Untitled';
   RecentMax = 10;

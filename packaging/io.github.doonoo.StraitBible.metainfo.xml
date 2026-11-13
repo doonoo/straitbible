@@ -19,8 +19,11 @@
     </ul>
   </description>
   <launchable type="desktop-id">straitbible.desktop</launchable>
-  <url type="homepage">https://github.com/doonoo/unboundbible</url>
-  <url type="bugtracker">https://github.com/doonoo/unboundbible/issues</url>
+  <releases>
+    <release version="6.0" date="2026-11-13"/>
+  </releases>
+  <url type="homepage">https://github.com/doonoo/straitbible</url>
+  <url type="bugtracker">https://github.com/doonoo/straitbible/issues</url>
   <categories>
     <category>Education</category>
     <category>Literature</category>

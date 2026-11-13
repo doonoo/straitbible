@@ -1,11 +1,11 @@
 
 Name: straitbible
-Version: 5.4
+Version: 6.0
 Release: 0
 Group: Applications/Education
 Summary: Open Source Bible Application 
 License: GPLv3+
-URL: https://github.com/doonoo/unboundbible
+URL: https://github.com/doonoo/straitbible
 
 %define _rpmdir ../SPECS
 %define _rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm

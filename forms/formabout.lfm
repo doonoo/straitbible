@@ -382,7 +382,7 @@ object AboutBox: TAboutBox
     Height = 13
     Top = 152
     Width = 240
-    Caption = 'github.com/doonoo/unboundbible'
+    Caption = 'github.com/doonoo/straitbible'
     Font.Color = clNavy
     Font.Style = [fsUnderline]
     ParentColor = False
