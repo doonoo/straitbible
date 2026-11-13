@@ -304,8 +304,12 @@ type
     BookmarkList : TStringList; // "book|chapter|number"
     HighlightList : TStringList; // "book|chapter|number=color" (color 1..5)
     NoteList : TStringList;      // "book|chapter|number=text", the notes written by the user
+    NightTimer : TTimer;         // switches to the night theme and back
+    AppliedTheme : string;
     Voice : Variant;             // Windows speech (SAPI), created when it is first needed
     FullScreenPrevious : TWindowState;
+    procedure NightTimerTick(Sender: TObject);
+    procedure RandomVerse(Sender: TObject);
     procedure SaveNotes;
     procedure ReloadUserData;
     function  InsertVerseNotes(const s: string): string;
@@ -341,8 +345,16 @@ type
   public
     ThemeName : string;
     NoteMode : integer; // noteShow, noteHover or noteHide
+    NightTheme : string;           // theme used in the evening and at night, '' = none
+    MarginIndex : integer;         // text margins: 0 none, 1 small, 2 medium, 3 large
+    Justify : boolean;             // justified text
+    BackgroundFile : string;       // picture behind the text, '' = none
+    BackgroundVisibility : integer; // 5..100
+    BackgroundMode : integer;      // bgCover, bgStretch or bgTile
     SpacingIndex : integer;  // line spacing: 0 normal, 1 relaxed, 2 wide, 3 double
     DailyVerse : boolean;    // go to the verse of the day when the program starts
+    function EffectiveTheme: string;
+    procedure UpdateBackground;
     procedure GoToChapter(book, chapter: integer);
     procedure SaveSettings; // writes config.ini now (the font, theme... must survive a crash)
     procedure Redraw;
@@ -362,7 +374,7 @@ uses
   {$ifdef windows} UmParseWin, ComObj, {$endif} Variants,
   FormAbout, FormNotify, FormSearch, FormOptions, FormCopy, FormShelf,
   UnitTools, UnitLocal, UnitModule, UnitBible, UnitCommentary, UnitDictionary,
-  UnitTheme, UnitFonts, UnitChrome, UnitChromeIcons, UnitPlan, FormPlan;
+  UnitTheme, UnitFonts, UnitChrome, UnitChromeIcons, UnitPlan, FormPlan, UnitBackground;
 
 var
   TextColor : TColor = clWindowText;
@@ -373,6 +385,7 @@ var
 
 const
   SpacingValues : array [0..3] of double = (1.2, 1.4, 1.6, 2.0);
+  MarginValues : array [0..3] of double = (0, 14, 30, 50); // points, on both sides
 
   // highlight colors (BGR): yellow, green, blue, pink, orange
   HighlightColors : array [1..5] of TColor = ($5CE4FF, $94D68F, $F0C87E, $C8A6F4, $6BB8FF);
@@ -571,6 +584,10 @@ begin
   HighlightList := TStringList.Create;
   NoteList := TStringList.Create;
   Voice := Unassigned;
+  Randomize;
+  NightTimer := TTimer.Create(Self);
+  NightTimer.Interval := 60000;
+  NightTimer.OnTimer := NightTimerTick;
   miBookmarks := TMenuItem.Create(Self);
   miBookmarks.Caption := 'Bookmarks'; // translated later by Localize (T() is not ready yet)
   MainMenu.Items.Insert(MainMenu.Items.IndexOf(miHelp), miBookmarks);
@@ -635,7 +652,15 @@ end;
 procedure TMainForm.FormShow(Sender: TObject);
 begin
   if not showed then FirstAppearance;
-  if not showed then ThemeWindow; // the window handle exists now
+  if not showed then
+    begin
+      ThemeWindow; // the window handle exists now
+      if ThemeEnabled then
+        begin
+          AssignFont; // the colors of the text are taken again, and the page is drawn with them
+          Redraw;
+        end;
+    end;
   if not showed and DailyVerse then GoDailyVerse(nil);
   showed := True;
   {$ifdef windows} IdleMessage := 'HideCursor'; {$endif}
@@ -733,7 +758,8 @@ var
   end;
 
 begin
-  if (ThemeName <> SystemThemeName) and LoadTheme(ThemeName, Theme) then
+  AppliedTheme := EffectiveTheme;
+  if (AppliedTheme <> SystemThemeName) and LoadTheme(AppliedTheme, Theme) then
     begin
       ActivateTheme(Theme);
       TextColor := Theme.text;
@@ -741,7 +767,8 @@ begin
     end
   else
     begin
-      ThemeName := SystemThemeName;
+      if AppliedTheme = ThemeName then ThemeName := SystemThemeName;
+      AppliedTheme := SystemThemeName;
       DeactivateTheme;
       TextColor := clWindowText;
       TextBackground := clWindow;
@@ -815,6 +842,8 @@ begin
   ChromeMenu(PopupTabs, ThemeEnabled);
   TintImages(Images, ImagesOriginal, dark, TextColor);
   StandardToolBar.Invalidate;
+
+  UpdateBackground;
 
   // dialogs that already exist (the others are themed when they are shown)
   for i := 0 to Screen.FormCount - 1 do ThemeForm(Screen.Forms[i]);
@@ -892,6 +921,7 @@ begin
   Highlight.Add(Item);
 
   miBookmarks.Add(NewItem(T('Verse of the day'), 0, False, True, GoDailyVerse, 0, ''));
+  miBookmarks.Add(NewItem(T('Random verse'), 0, False, True, RandomVerse, 0, ''));
   miBookmarks.Add(NewItem(T('Note for this verse') + '...', 0, False, True, VerseNoteEdit, 0, ''));
   miBookmarks.Add(NewItem(T('Reading plan') + '...', 0, False, True, ReadingPlanClick, 0, ''));
   {$ifdef windows}
@@ -1040,11 +1070,26 @@ end;
 procedure TMainForm.ApplySpacing(Memo: TUnboundMemo);
 var
   m : TParaMetric;
+  mask : TParaModifyMask;
 begin
-  if (SpacingIndex < 1) or (SpacingIndex > High(SpacingValues)) then Exit;
+  mask := [];
   InitParaMetric(m);
-  m.LineSpacing := SpacingValues[SpacingIndex];
-  Memo.SetRangeParaParams(0, Length(Memo.Text), [pmm_LineSpacing], m);
+
+  if (SpacingIndex >= 1) and (SpacingIndex <= High(SpacingValues)) then
+    begin
+      m.LineSpacing := SpacingValues[SpacingIndex];
+      mask += [pmm_LineSpacing];
+    end;
+
+  if (MarginIndex >= 1) and (MarginIndex <= High(MarginValues)) then
+    begin
+      m.HeadIndent := MarginValues[MarginIndex];
+      m.TailIndent := MarginValues[MarginIndex];
+      mask += [pmm_HeadIndent, pmm_TailIndent];
+    end;
+
+  if mask <> [] then Memo.SetRangeParaParams(0, Length(Memo.Text), mask, m);
+  if Justify then Memo.SetParaAlignment(0, Length(Memo.Text), paJustify);
 end;
 
 //----------------------------------------- highlights -------------------------------------------
@@ -1212,6 +1257,65 @@ end;
 procedure TMainForm.ShowMyBookmarks(Sender: TObject);
 begin
   ShowMyVerses(False);
+end;
+
+//-------------------------- night theme, random verse, background picture -----------------------
+
+// the theme to use now: the night theme between 19:00 and 07:00 when there is one
+function TMainForm.EffectiveTheme: string;
+var
+  t : TDateTime;
+begin
+  Result := ThemeName;
+  if NightTheme.IsEmpty then Exit;
+  t := Frac(Now);
+  if (t >= 19 / 24) or (t < 7 / 24) then Result := NightTheme;
+end;
+
+procedure TMainForm.NightTimerTick(Sender: TObject);
+begin
+  if EffectiveTheme <> AppliedTheme then ApplyTheme;
+end;
+
+procedure TMainForm.RandomVerse(Sender: TObject);
+var
+  book, chapter, tries : integer;
+  Verse : TVerse;
+begin
+  for tries := 1 to 20 do
+    begin
+      PlanChapter(Random(PlanChapters), book, chapter);
+      Verse.Init;
+      Verse.book := book;
+      Verse.chapter := chapter;
+      Verse.number := 1;
+      Verse.count := 1;
+      if not CurrBible.GoodLink(Verse) then Continue;
+
+      Verse.number := 1 + Random(CurrBible.VersesCount(Verse));
+      if not CurrBible.GoodLink(Verse) then Continue;
+
+      CurrVerse := Verse;
+      ShowCurrVerse(True);
+      Tools.AddHistory;
+      Exit;
+    end;
+end;
+
+// The picture behind the text areas (see UnitBackground). Called when the theme, the picture or
+// its settings change.
+procedure TMainForm.UpdateBackground;
+
+  procedure One(Memo: TUnboundMemo);
+  begin
+    BackgroundAttach(Memo); // again after the window of the memo has been recreated
+    BackgroundRefresh(Memo);
+  end;
+
+begin
+  BackgroundSet(BackgroundFile, BackgroundVisibility, BackgroundMode, TextBackground);
+  One(MemoBible);      One(MemoCompare);  One(MemoCommentary); One(MemoDictionary);
+  One(MemoReference);  One(MemoSearch);   One(MemoHistory);    One(MemoNotes);
 end;
 
 //--------------------------------- notes, speech, export, backup --------------------------------
@@ -2728,6 +2832,12 @@ begin
   IniFile.WriteString ('Application', 'Theme', ThemeName);
   IniFile.WriteInteger('Application', 'GreyNotes', NoteMode);
   IniFile.WriteInteger('Application', 'LineSpacing', SpacingIndex);
+  IniFile.WriteInteger('Application', 'Margins', MarginIndex);
+  IniFile.WriteBool   ('Application', 'Justify', Justify);
+  IniFile.WriteString ('Application', 'NightTheme', NightTheme);
+  IniFile.WriteString ('Application', 'BackgroundFile', BackgroundFile);
+  IniFile.WriteInteger('Application', 'BackgroundVisibility', BackgroundVisibility);
+  IniFile.WriteInteger('Application', 'BackgroundMode', BackgroundMode);
   IniFile.WriteBool   ('Application', 'DailyVerse', DailyVerse);
   PlanSave(IniFile);
   IniFile.WriteBool('Copy', 'Abbreviate', CopyOptions.cvAbbreviate);
@@ -2766,6 +2876,12 @@ begin
   ThemeName := IniFile.ReadString ('Application', 'Theme', SystemThemeName);
   NoteMode := IniFile.ReadInteger('Application', 'GreyNotes', noteShow);
   SpacingIndex := IniFile.ReadInteger('Application', 'LineSpacing', 0);
+  MarginIndex := IniFile.ReadInteger('Application', 'Margins', 0);
+  Justify := IniFile.ReadBool('Application', 'Justify', False);
+  NightTheme := IniFile.ReadString('Application', 'NightTheme', '');
+  BackgroundFile := IniFile.ReadString('Application', 'BackgroundFile', '');
+  BackgroundVisibility := IniFile.ReadInteger('Application', 'BackgroundVisibility', 25);
+  BackgroundMode := IniFile.ReadInteger('Application', 'BackgroundMode', 0);
   DailyVerse := IniFile.ReadBool('Application', 'DailyVerse', False);
   PlanLoad(IniFile);
   CopyOptions.cvAbbreviate := IniFile.ReadBool('Copy', 'Abbreviate', False);

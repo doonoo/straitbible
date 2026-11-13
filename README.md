@@ -4,6 +4,15 @@ Unbound Bible
 The Unbound Bible is an open source and a free, multilingual Bible-reader program for Windows, macOS and Linux. This is fast and effective way to explore bibles.
 
 
+Credits and license
+-------------------
+
+This program is based on **Unbound Bible** by **Vladimir Rybant**
+([github.com/vrybant/unboundbible](https://github.com/vrybant/unboundbible)), who wrote the program, the
+Bible module formats and the RichMemo based text view that everything here builds on. It is free software,
+published under the **GNU General Public License v3** (see `LICENSE`), like the original. The original
+copyright notices stay in the source files.
+
 Changes in this fork
 --------------------
 
@@ -26,6 +35,11 @@ Changes in this fork
 - *Chapter* submenu: *Copy chapter* (Ctrl+Shift+C) and *Save chapter as text file...*.
 - *My data* submenu: back up the bookmarks, highlights, notes and reading plan to a file, and restore them from one (for example on another computer).
 - Ctrl+G: jump to the reference box (type for example `John 3:16` and press Enter).
+- Options → *Background*: a picture (jpg, png or bmp) behind the text of every page, as *cover*, *stretch* or *tile*, with a *Visibility* slider (a low value keeps the text easy to read). Windows only: the text areas are painted by `unitbackground.pas`.
+- Options → *Text margins* (none, small, medium, large) and *Justify the text*.
+- Options → *Night theme*: a theme that is used automatically from 19:00 to 07:00.
+- *Random verse* (Bookmarks menu).
+- The text colors follow the theme on Windows too (the text, links, notes, footnotes, words of Christ and Strong's numbers).
 - Options → *Line spacing*: normal, relaxed, wide or double, for the Bible and Compare pages.
 - Settings (font, size, theme, ...) are written to `config.ini` as soon as they are changed.
 - Ctrl+Left / Ctrl+Right: previous / next chapter, across the books (not on the Notes page, where they move by word).

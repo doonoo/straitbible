@@ -3,7 +3,7 @@ unit FormOptions;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls;
 
 type
 
@@ -18,6 +18,18 @@ type
     ComboBoxSpacing: TComboBox;
     LabelSpacing: TLabel;
     CheckDaily: TCheckBox;
+    CheckJustify: TCheckBox;
+    ComboBoxNight: TComboBox;
+    LabelNight: TLabel;
+    ComboBoxMargins: TComboBox;
+    LabelMargins: TLabel;
+    LabelBackground: TLabel;
+    ButtonBackground: TButton;
+    ButtonBackgroundClear: TButton;
+    LabelBgMode: TLabel;
+    ComboBoxBgMode: TComboBox;
+    LabelBgVisible: TLabel;
+    TrackBarBg: TTrackBar;
     EditMax: TEdit;
     LabelHistory: TLabel;
     LabelTheme: TLabel;
@@ -28,6 +40,13 @@ type
     ComboBoxSize: TComboBox;
     ButtonClose: TButton;
     procedure ComboBoxNotesSelect(Sender: TObject);
+    procedure ComboBoxNightSelect(Sender: TObject);
+    procedure ComboBoxMarginsSelect(Sender: TObject);
+    procedure CheckJustifyChange(Sender: TObject);
+    procedure ButtonBackgroundClick(Sender: TObject);
+    procedure ButtonBackgroundClearClick(Sender: TObject);
+    procedure ComboBoxBgModeSelect(Sender: TObject);
+    procedure TrackBarBgChange(Sender: TObject);
     procedure ComboBoxSpacingSelect(Sender: TObject);
     procedure CheckDailyChange(Sender: TObject);
     procedure ButtonAddFontClick(Sender: TObject);
@@ -47,6 +66,9 @@ type
     procedure MakeThemeList;
     procedure MakeNoteList;
     procedure MakeSpacingList;
+    procedure MakeMarginList;
+    procedure MakeNightList;
+    procedure MakeBackgroundControls;
   public
     procedure Localize;
   end;
@@ -68,6 +90,10 @@ begin
   MakeThemeList;
   MakeNoteList;
   MakeSpacingList;
+  MakeMarginList;
+  MakeNightList;
+  MakeBackgroundControls;
+  CheckJustify.Checked := MainForm.Justify;
   CheckDaily.Checked := MainForm.DailyVerse;
   EditMax.Text := Tools.HistoryMax.ToString;
 end;
@@ -80,6 +106,14 @@ begin
   LabelTheme.Caption := T('Theme');
   LabelNotes.Caption := T('Grey notes');
   LabelSpacing.Caption := T('Line spacing');
+  LabelNight.Caption := T('Night theme');
+  LabelMargins.Caption := T('Text margins');
+  CheckJustify.Caption := T('Justify the text');
+  LabelBackground.Caption := T('Background');
+  ButtonBackground.Caption := T('Choose a picture') + '...';
+  ButtonBackgroundClear.Caption := T('Remove');
+  LabelBgMode.Caption := T('Picture');
+  LabelBgVisible.Caption := T('Visibility');
   CheckDaily.Caption := T('Show the verse of the day on startup');
   ButtonAddFont.Caption := T('Add font') + '...';
   ButtonTheme.Caption := T('Customize theme') + '...';
@@ -166,6 +200,100 @@ procedure TOptionsForm.ComboBoxNotesSelect(Sender: TObject);
 begin
   MainForm.NoteMode := ComboBoxNotes.ItemIndex;
   MainForm.Redraw;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.MakeMarginList;
+begin
+  ComboBoxMargins.Items.Clear;
+  ComboBoxMargins.Items.Add(T('None'));
+  ComboBoxMargins.Items.Add(T('Small'));
+  ComboBoxMargins.Items.Add(T('Medium'));
+  ComboBoxMargins.Items.Add(T('Large'));
+  ComboBoxMargins.ItemIndex := MainForm.MarginIndex;
+end;
+
+procedure TOptionsForm.ComboBoxMarginsSelect(Sender: TObject);
+begin
+  MainForm.MarginIndex := ComboBoxMargins.ItemIndex;
+  MainForm.Redraw;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.CheckJustifyChange(Sender: TObject);
+begin
+  MainForm.Justify := CheckJustify.Checked;
+  MainForm.Redraw;
+  MainForm.SaveSettings;
+end;
+
+// the night theme is used from 19:00 to 07:00; the first entry means none
+procedure TOptionsForm.MakeNightList;
+var
+  i : integer;
+begin
+  GetThemeNames(ComboBoxNight.Items);
+  ComboBoxNight.Items[0] := T('None'); // replaces "System default" at the top
+  i := ComboBoxNight.Items.IndexOf(MainForm.NightTheme);
+  if (MainForm.NightTheme = '') or (i < 0) then i := 0;
+  ComboBoxNight.ItemIndex := i;
+end;
+
+procedure TOptionsForm.ComboBoxNightSelect(Sender: TObject);
+begin
+  if ComboBoxNight.ItemIndex <= 0 then MainForm.NightTheme := ''
+  else MainForm.NightTheme := ComboBoxNight.Items[ComboBoxNight.ItemIndex];
+  MainForm.ApplyTheme;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.MakeBackgroundControls;
+begin
+  ComboBoxBgMode.Items.Clear;
+  ComboBoxBgMode.Items.Add(T('Cover the area'));
+  ComboBoxBgMode.Items.Add(T('Stretch'));
+  ComboBoxBgMode.Items.Add(T('Tile'));
+  ComboBoxBgMode.ItemIndex := MainForm.BackgroundMode;
+  TrackBarBg.Position := MainForm.BackgroundVisibility;
+end;
+
+procedure TOptionsForm.ButtonBackgroundClick(Sender: TObject);
+var
+  Dlg : TOpenDialog;
+begin
+  Dlg := TOpenDialog.Create(Self);
+  try
+    Dlg.Title := T('Choose a picture');
+    Dlg.Filter := 'Pictures (*.jpg;*.jpeg;*.png;*.bmp)|*.jpg;*.jpeg;*.png;*.bmp;*.JPG;*.JPEG;*.PNG;*.BMP';
+    Dlg.Options := Dlg.Options + [ofFileMustExist];
+    if not Dlg.Execute then Exit;
+    MainForm.BackgroundFile := Dlg.FileName;
+  finally
+    Dlg.Free;
+  end;
+  MainForm.UpdateBackground;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.ButtonBackgroundClearClick(Sender: TObject);
+begin
+  MainForm.BackgroundFile := '';
+  MainForm.UpdateBackground;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.ComboBoxBgModeSelect(Sender: TObject);
+begin
+  MainForm.BackgroundMode := ComboBoxBgMode.ItemIndex;
+  MainForm.UpdateBackground;
+  MainForm.SaveSettings;
+end;
+
+procedure TOptionsForm.TrackBarBgChange(Sender: TObject);
+begin
+  if MainForm.BackgroundVisibility = TrackBarBg.Position then Exit;
+  MainForm.BackgroundVisibility := TrackBarBg.Position;
+  MainForm.UpdateBackground;
   MainForm.SaveSettings;
 end;
 

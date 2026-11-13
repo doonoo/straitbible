@@ -1,11 +1,11 @@
 object OptionsForm: TOptionsForm
   Left = 406
-  Height = 475
-  Top = 546
+  Height = 690
+  Top = 120
   Width = 445
   BorderStyle = bsDialog
   Caption = 'Options'
-  ClientHeight = 475
+  ClientHeight = 690
   ClientWidth = 445
   FormStyle = fsStayOnTop
   OnShow = FormShow
@@ -13,7 +13,7 @@ object OptionsForm: TOptionsForm
   object LabelLang: TLabel
     Left = 10
     Height = 22
-    Top = 27
+    Top = 23
     Width = 100
     Caption = 'Localization'
     ParentColor = False
@@ -21,7 +21,7 @@ object OptionsForm: TOptionsForm
   object ComboBoxLang: TComboBox
     Left = 120
     Height = 36
-    Top = 20
+    Top = 16
     Width = 315
     Anchors = [akTop, akLeft, akRight]
     DropDownCount = 10
@@ -33,7 +33,7 @@ object OptionsForm: TOptionsForm
   object LabelFont: TLabel
     Left = 10
     Height = 22
-    Top = 76
+    Top = 67
     Width = 100
     Caption = 'Font'
     ParentColor = False
@@ -41,7 +41,7 @@ object OptionsForm: TOptionsForm
   object ComboBoxFont: TComboBox
     Left = 120
     Height = 36
-    Top = 69
+    Top = 60
     Width = 248
     Anchors = [akTop, akLeft, akRight]
     ItemHeight = 22
@@ -52,7 +52,7 @@ object OptionsForm: TOptionsForm
   object ComboBoxSize: TComboBox
     Left = 378
     Height = 36
-    Top = 69
+    Top = 60
     Width = 57
     Anchors = [akTop, akRight]
     ItemHeight = 22
@@ -63,7 +63,7 @@ object OptionsForm: TOptionsForm
   object ButtonAddFont: TButton
     Left = 120
     Height = 30
-    Top = 112
+    Top = 100
     Width = 315
     Anchors = [akTop, akLeft, akRight]
     Caption = 'Add font...'
@@ -73,7 +73,7 @@ object OptionsForm: TOptionsForm
   object LabelTheme: TLabel
     Left = 10
     Height = 22
-    Top = 166
+    Top = 147
     Width = 100
     Caption = 'Theme'
     ParentColor = False
@@ -81,7 +81,7 @@ object OptionsForm: TOptionsForm
   object ComboBoxTheme: TComboBox
     Left = 120
     Height = 36
-    Top = 159
+    Top = 140
     Width = 315
     Anchors = [akTop, akLeft, akRight]
     DropDownCount = 12
@@ -93,17 +93,37 @@ object OptionsForm: TOptionsForm
   object ButtonTheme: TButton
     Left = 120
     Height = 30
-    Top = 202
+    Top = 184
     Width = 315
     Anchors = [akTop, akLeft, akRight]
     Caption = 'Customize theme...'
     OnClick = ButtonThemeClick
     TabOrder = 5
   end
+  object LabelNight: TLabel
+    Left = 10
+    Height = 22
+    Top = 231
+    Width = 100
+    Caption = 'Night theme'
+    ParentColor = False
+  end
+  object ComboBoxNight: TComboBox
+    Left = 120
+    Height = 36
+    Top = 224
+    Width = 315
+    Anchors = [akTop, akLeft, akRight]
+    DropDownCount = 12
+    ItemHeight = 22
+    OnSelect = ComboBoxNightSelect
+    Style = csDropDownList
+    TabOrder = 6
+  end
   object LabelNotes: TLabel
     Left = 10
     Height = 22
-    Top = 256
+    Top = 275
     Width = 100
     Caption = 'Grey notes'
     ParentColor = False
@@ -111,18 +131,18 @@ object OptionsForm: TOptionsForm
   object ComboBoxNotes: TComboBox
     Left = 120
     Height = 36
-    Top = 249
+    Top = 268
     Width = 315
     Anchors = [akTop, akLeft, akRight]
     ItemHeight = 22
     OnSelect = ComboBoxNotesSelect
     Style = csDropDownList
-    TabOrder = 6
+    TabOrder = 7
   end
   object LabelSpacing: TLabel
     Left = 10
     Height = 22
-    Top = 306
+    Top = 319
     Width = 100
     Caption = 'Line spacing'
     ParentColor = False
@@ -130,27 +150,123 @@ object OptionsForm: TOptionsForm
   object ComboBoxSpacing: TComboBox
     Left = 120
     Height = 36
-    Top = 299
+    Top = 312
     Width = 315
     Anchors = [akTop, akLeft, akRight]
     ItemHeight = 22
     OnSelect = ComboBoxSpacingSelect
     Style = csDropDownList
+    TabOrder = 8
+  end
+  object LabelMargins: TLabel
+    Left = 10
+    Height = 22
+    Top = 363
+    Width = 100
+    Caption = 'Text margins'
+    ParentColor = False
+  end
+  object ComboBoxMargins: TComboBox
+    Left = 120
+    Height = 36
+    Top = 356
+    Width = 315
+    Anchors = [akTop, akLeft, akRight]
+    ItemHeight = 22
+    OnSelect = ComboBoxMarginsSelect
+    Style = csDropDownList
     TabOrder = 9
+  end
+  object CheckJustify: TCheckBox
+    Left = 120
+    Height = 26
+    Top = 400
+    Width = 315
+    Caption = 'Justify the text'
+    OnChange = CheckJustifyChange
+    TabOrder = 10
   end
   object CheckDaily: TCheckBox
     Left = 120
     Height = 26
-    Top = 349
+    Top = 428
     Width = 315
     Caption = 'Show the verse of the day on startup'
     OnChange = CheckDailyChange
-    TabOrder = 10
+    TabOrder = 11
+  end
+  object LabelBackground: TLabel
+    Left = 10
+    Height = 22
+    Top = 469
+    Width = 100
+    Caption = 'Background'
+    ParentColor = False
+  end
+  object ButtonBackground: TButton
+    Left = 120
+    Height = 30
+    Top = 464
+    Width = 205
+    Anchors = [akTop, akLeft, akRight]
+    Caption = 'Choose a picture...'
+    OnClick = ButtonBackgroundClick
+    TabOrder = 12
+  end
+  object ButtonBackgroundClear: TButton
+    Left = 333
+    Height = 30
+    Top = 464
+    Width = 102
+    Anchors = [akTop, akRight]
+    Caption = 'Remove'
+    OnClick = ButtonBackgroundClearClick
+    TabOrder = 13
+  end
+  object LabelBgMode: TLabel
+    Left = 10
+    Height = 22
+    Top = 513
+    Width = 100
+    Caption = 'Picture'
+    ParentColor = False
+  end
+  object ComboBoxBgMode: TComboBox
+    Left = 120
+    Height = 36
+    Top = 506
+    Width = 315
+    Anchors = [akTop, akLeft, akRight]
+    ItemHeight = 22
+    OnSelect = ComboBoxBgModeSelect
+    Style = csDropDownList
+    TabOrder = 14
+  end
+  object LabelBgVisible: TLabel
+    Left = 10
+    Height = 22
+    Top = 557
+    Width = 100
+    Caption = 'Visibility'
+    ParentColor = False
+  end
+  object TrackBarBg: TTrackBar
+    Left = 120
+    Height = 30
+    Top = 550
+    Width = 315
+    Frequency = 10
+    Max = 100
+    Min = 5
+    OnChange = TrackBarBgChange
+    Position = 25
+    Anchors = [akTop, akLeft, akRight]
+    TabOrder = 15
   end
   object LabelHistory: TLabel
     Left = 10
     Height = 22
-    Top = 406
+    Top = 605
     Width = 350
     Caption = 'Maximum verses in history '
     ParentColor = False
@@ -158,24 +274,24 @@ object OptionsForm: TOptionsForm
   object EditMax: TEdit
     Left = 378
     Height = 36
-    Top = 399
+    Top = 598
     Width = 57
     Alignment = taCenter
     Anchors = [akTop, akRight]
     MaxLength = 4
     NumbersOnly = True
     OnChange = EditMaxChange
-    TabOrder = 7
+    TabOrder = 16
     Text = '200'
   end
   object ButtonClose: TButton
     Left = 170
     Height = 32
-    Top = 435
+    Top = 646
     Width = 104
     Caption = 'Close'
     ModalResult = 11
     OnClick = ButtonCloseClick
-    TabOrder = 8
+    TabOrder = 17
   end
 end

@@ -14,6 +14,17 @@ uses UmParse;
 const
   rtf_close = '}';
 
+// one entry of the RTF color table
+function RtfColor(c: TColor): string;
+begin
+  c := ColorToRGB(c);
+  Result := '\red' + IntToStr(c and $FF) + '\green' + IntToStr((c shr 8) and $FF) +
+            '\blue' + IntToStr((c shr 16) and $FF) + ';';
+end;
+
+// The colors follow the theme: the text uses the color of the font of the memo, the links, notes,
+// footnotes, words of Christ and Strong's numbers use the colors of the theme (UnitLib). Without a
+// theme these are the usual colors.
 function rtf_open(Font: TFont): string;
 begin
   Result :=
@@ -23,14 +34,14 @@ begin
     + '{\f1 ' + Font.Name + ';}'
     + '}'
     + '{\colortbl;'
-    + '\red0\green0\blue0;'        // 1 black
+    + RtfColor(Font.Color)         // 1 text
     + '\red192\green0\blue0;'      // 2 red
-    + '\red0\green0\blue128;'      // 3 navy
+    + RtfColor(clSysNavy)          // 3 navy (links)
     + '\red0\green128\blue0;'      // 4 green
-    + '\red128\green128\blue128;'  // 5 gray
-    + '\red0\green128\blue128;'    // 6 teal
-    + '\red128\green0\blue0;'      // 7 maroon
-    + '\red153\green102\blue51;'   // 8 brown
+    + RtfColor(clSysGray)          // 5 gray (notes)
+    + RtfColor(clSysTeal)          // 6 teal (footnotes)
+    + RtfColor(clSysMaroon)        // 7 maroon (words of Christ)
+    + RtfColor(clSysBrown)         // 8 brown (Strong's numbers)
     + '\red139\green69\blue19;'    // 9 saddlebrown
     + '\red128\green0\blue128;'    // 10 purple
     + '}'
