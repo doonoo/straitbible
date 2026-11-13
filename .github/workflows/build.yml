@@ -80,8 +80,9 @@ jobs:
 
       - name: Install Free Pascal and Lazarus 4.8
         run: |
-          wget -q "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg" -O "$RUNNER_TEMP/fpc.dmg"
-          wget -q "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20aarch64/Lazarus%204.8/lazarus-darwin-aarch64-4.8.zip" -O "$RUNNER_TEMP/lazarus.zip"
+          # SourceForge is sometimes very slow: give up and retry instead of hanging for hours
+          curl -fL --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/fpc.dmg" "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg/download"
+          curl -fL --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/lazarus.zip" "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20aarch64/Lazarus%204.8/lazarus-darwin-aarch64-4.8.zip/download"
           sudo hdiutil attach "$RUNNER_TEMP/fpc.dmg"
           FPC_VOL=$(ls -d /Volumes/fpc* | head -1)
           FPC_PKG=$(find "$FPC_VOL" -maxdepth 1 -name "*.pkg" | head -1)
