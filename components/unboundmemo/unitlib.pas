@@ -88,6 +88,14 @@ function clSysBrown: TColor;
 function clSysMaroon: TColor;
 function clSysNavy: TColor;
 function clSysTeal: TColor;
+function clSysGray: TColor;
+function clSysRed: TColor;
+
+// colors set by the active theme (see UnitTheme); when disabled the system colors are used
+
+var
+  ThemeEnabled : boolean = False;
+  ThemeLink, ThemeStrong, ThemeFootnote, ThemeWords, ThemeNote, ThemeRed : TColor;
 
 // debug
 
@@ -97,8 +105,6 @@ procedure Output(n: integer); overload;
 const
   clBlueScreen = TColor($BB4700);
   clGreenScreen = TColor($40B100);
-  clSysGray = clGray;
-  clSysRed = clRed;
 
 const
   Slash = DirectorySeparator;
@@ -522,22 +528,38 @@ end;
 
 function clSysBrown: TColor;
 begin
+  if ThemeEnabled then Exit(ThemeStrong);
   Result := iif(DarkTheme, TColor($1F97FD), TColor($336699));
 end;
 
 function clSysMaroon: TColor;
 begin
+  if ThemeEnabled then Exit(ThemeWords);
   Result := iif(DarkTheme, TColor($4242E5), clMaroon);
 end;
 
 function clSysNavy: TColor;
 begin
+  if ThemeEnabled then Exit(ThemeLink);
   Result := iif(DarkTheme, TColor($FF9900), clNavy);
 end;
 
 function clSysTeal: TColor;
 begin
+  if ThemeEnabled then Exit(ThemeFootnote);
   Result := iif(DarkTheme, TColor($CCCC66), clTeal);
+end;
+
+function clSysGray: TColor;
+begin
+  if ThemeEnabled then Exit(ThemeNote);
+  Result := clGray;
+end;
+
+function clSysRed: TColor;
+begin
+  if ThemeEnabled then Exit(ThemeRed);
+  Result := clRed;
 end;
 
 // debug

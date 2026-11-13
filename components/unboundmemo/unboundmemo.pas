@@ -33,6 +33,7 @@ type
     ParagraphCount : integer;
     constructor Create(AOwner: TComponent); override;
     function Foreground: integer;
+    function NoteAt(X, Y: integer; out Index: integer): boolean;
     function Breaks: integer;
     function Paragraphs: integer;
     procedure SelectParagraph(n: integer);
@@ -89,6 +90,38 @@ begin
   if SelAttributes.Color = clSysNavy  then Result := fgLink else
   if SelAttributes.Color = clSysBrown then Result := fgStrong else
   if SelAttributes.Color = clSysTeal  then Result := fgFootnote;
+end;
+
+// Is there a collapsed grey note, shown as "[+n]", under the point (X,Y)?
+// Does not move the caret or the selection. Index is the n of the marker.
+function TUnboundMemo.NoteAt(X, Y: integer; out Index: integer): boolean;
+var
+  pos, a, b : integer;
+  fp : TFontParams;
+  s : string;
+
+  function IsGrey(n: integer): boolean;
+  begin
+    Result := (n >= 0) and GetTextAttributes(n, fp) and (fp.Color = clSysGray);
+  end;
+
+begin
+  Result := False;
+  Index := 0;
+
+  pos := CharAtPos(X, Y);
+  if not IsGrey(pos) then Exit;
+
+  a := pos;
+  while (pos - a < 12) and IsGrey(a-1) do dec(a);
+  b := pos;
+  while (b - pos < 12) and IsGrey(b+1) do inc(b);
+
+  s := Trim(RemoveLineBreaker(GetText(a, b - a + 1)));
+  if not (Prefix('[+', s) and Suffix(']', s)) then Exit;
+
+  Index := ToInt(Copy(s, 3, Length(s) - 3));
+  Result := Index > 0;
 end;
 
 function TUnboundMemo.Breaks: integer;

@@ -8,6 +8,11 @@ uses
   LCLProc, ActnList, ClipBrd, StdActns, Buttons, PrintersDlgs,
   RichMemo, UnboundMemo, UnitUtils, UnitLib;
 
+const
+  noteShow  = 0; // grey notes shown in the text
+  noteHover = 1; // grey notes collapsed to [+n], hover over one to read it
+  noteHide  = 2; // grey notes hidden
+
 type
   TStatuses = TFPGMap<integer, string>;
 
@@ -286,8 +291,20 @@ type
     procedure VersesToClipboard;
     procedure ShowPopup;
     procedure Localize;
+  private
+    HoverTimer : TTimer;
+    HoverIndex : integer;
+    GreyNotes : TStringList; // text of the collapsed notes of the chapter on screen
+    procedure MemoBibleMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
+    procedure HoverTimerTick(Sender: TObject);
+    function ProcessNotes(const s: string; bible: boolean): string;
   public
+    ThemeName : string;
+    NoteMode : integer; // noteShow, noteHover or noteHide
+    procedure Redraw;
+    procedure ThemeWindow;
     procedure AssignFont;
+    procedure ApplyTheme(reload: boolean = True);
     procedure LocalizeApplication;
   end;
 
@@ -299,10 +316,100 @@ implementation
 uses
   {$ifdef windows} UmParseWin, {$endif}
   FormAbout, FormNotify, FormSearch, FormOptions, FormCopy, FormShelf,
-  UnitTools, UnitLocal, UnitModule, UnitBible, UnitCommentary, UnitDictionary;
+  UnitTools, UnitLocal, UnitModule, UnitBible, UnitCommentary, UnitDictionary,
+  UnitTheme, UnitFonts, UnitChrome;
+
+var
+  TextColor : TColor = clWindowText;
+  TextBackground : TColor = clWindow;
+  Chrome : TColor = clForm;        // window, panels and toolbar
+  ChromeText : TColor = clDefault;
+
+
+type
+  TControlHack = class(TControl); // gives access to the protected Color / ParentColor
+
+  TChromeOriginal = class
+    Color, FontColor : TColor;
+    ParentColor, ParentFont : boolean;
+  end;
+
+var
+  ChromeOriginals : TStringList = nil;
+
+// Paints a control with the theme colors; restores its own colors for "System default".
+procedure ApplyChrome(Control: TControl; themed: boolean);
+var
+  i : integer;
+  Orig : TChromeOriginal;
+begin
+  if ChromeOriginals = nil then
+    begin
+      ChromeOriginals := TStringList.Create;
+      ChromeOriginals.OwnsObjects := True;
+    end;
+
+  i := ChromeOriginals.IndexOf(Control.Name);
+  if i < 0 then
+    begin
+      Orig := TChromeOriginal.Create;
+      Orig.Color       := TControlHack(Control).Color;
+      Orig.ParentColor := TControlHack(Control).ParentColor;
+      Orig.FontColor   := Control.Font.Color;
+      Orig.ParentFont  := TControlHack(Control).ParentFont;
+      ChromeOriginals.AddObject(Control.Name, Orig);
+    end
+  else
+    Orig := TChromeOriginal(ChromeOriginals.Objects[i]);
+
+  if themed then
+    begin
+      TControlHack(Control).Color := Chrome;
+      Control.Font.Color := ChromeText;
+    end
+  else
+    begin
+      TControlHack(Control).Color := Orig.Color;
+      TControlHack(Control).ParentColor := Orig.ParentColor;
+      Control.Font.Color := Orig.FontColor;
+      TControlHack(Control).ParentFont := Orig.ParentFont;
+    end;
+end;
+
+var
+  PopupColor, PopupMemoColor, PopupTitleColor : TColor;
+  PopupSaved : boolean = False;
+
+procedure ThemePopup; // colors of the footnote / Strong's popup
+begin
+  if not Assigned(NotifyForm) then Exit;
+
+  if not PopupSaved then // remember the original look to restore it for "System default"
+    begin
+      PopupColor := NotifyForm.Color;
+      PopupMemoColor := NotifyForm.Memo.Color;
+      PopupTitleColor := NotifyForm.Title.Font.Color;
+      PopupSaved := True;
+    end;
+
+  if ThemeEnabled then
+    begin
+      NotifyForm.Color := Chrome;
+      NotifyForm.Title.Font.Color := ChromeText;
+      NotifyForm.Memo.Color := TextBackground;
+      NotifyForm.Memo.Font.Color := TextColor;
+    end
+  else
+    begin
+      NotifyForm.Color := PopupColor;
+      NotifyForm.Title.Font.Color := PopupTitleColor;
+      NotifyForm.Memo.Color := PopupMemoColor;
+      NotifyForm.Memo.Font.Color := clWindowText;
+    end;
+end;
 
 const
-  apBible        = 0; // active page
+  apBible       = 0; // active page
   apSearch       = 1;
   apCompare      = 2;
   apReferences   = 3;
@@ -329,8 +436,16 @@ begin
   SaveDialog.InitialDir := DocumentsPath;
   NoteFileName := Untitled;
 
+  GreyNotes := TStringList.Create;
+  HoverTimer := TTimer.Create(Self);
+  HoverTimer.Enabled := False;
+  HoverTimer.Interval := 300;
+  HoverTimer.OnTimer := HoverTimerTick;
+  MemoBible.OnMouseMove := MemoBibleMouseMove;
+
+  LoadFonts; // bundled and user fonts, before the saved font is selected
   ReadConfig;
-  AssignFont;
+  ApplyTheme(False);
   MakeRecentMenu;
 
   NoteFileName := Untitled;
@@ -364,6 +479,7 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   SaveConfig;
+  GreyNotes.Free;
   Statuses.Free;
   Localization.Free;
 end;
@@ -384,6 +500,7 @@ end;
 procedure TMainForm.FormShow(Sender: TObject);
 begin
   if not showed then FirstAppearance;
+  if not showed then ThemeWindow; // the window handle exists now
   showed := True;
   {$ifdef windows} IdleMessage := 'HideCursor'; {$endif}
 end;
@@ -440,6 +557,127 @@ begin
   MemoHistory.Font.Assign(Font);
   MemoReference.Font.Assign(Font);
   MemoSearch.Font.Assign(Font);
+  MemoNotes.Font.Color := TextColor; // Font.Assign above resets the color, so set it again
+  MemoBible.Font.Color := TextColor;
+  MemoCommentary.Font.Color := TextColor;
+  MemoCompare.Font.Color := TextColor;
+  MemoDictionary.Font.Color := TextColor;
+  MemoHistory.Font.Color := TextColor;
+  MemoReference.Font.Color := TextColor;
+  MemoSearch.Font.Color := TextColor;
+end;
+
+procedure TMainForm.ApplyTheme(reload: boolean);
+var
+  Theme : TTheme;
+
+  procedure PaintMemo(Memo: TUnboundMemo);
+  begin
+    Memo.Color := TextBackground;
+  end;
+
+  procedure PaintBox(Box: TWinControl);
+  begin
+    Box.Color := TextBackground;
+    Box.Font.Color := TextColor;
+  end;
+
+  procedure PaintChrome(Control: TControl);
+  begin
+    ApplyChrome(Control, ThemeEnabled);
+  end;
+
+  function Blend(a, b: TColor; percent: integer): TColor;
+  begin
+    a := ColorToRGB(a);
+    b := ColorToRGB(b);
+    Result := RGBToColor(Red(a) + (Red(b) - Red(a)) * percent div 100,
+                         Green(a) + (Green(b) - Green(a)) * percent div 100,
+                         Blue(a) + (Blue(b) - Blue(a)) * percent div 100);
+  end;
+
+begin
+  if (ThemeName <> SystemThemeName) and LoadTheme(ThemeName, Theme) then
+    begin
+      ActivateTheme(Theme);
+      TextColor := Theme.text;
+      TextBackground := Theme.background;
+    end
+  else
+    begin
+      ThemeName := SystemThemeName;
+      DeactivateTheme;
+      TextColor := clWindowText;
+      TextBackground := clWindow;
+    end;
+
+  PaintMemo(MemoBible);     PaintMemo(MemoCommentary); PaintMemo(MemoCompare);
+  PaintMemo(MemoDictionary); PaintMemo(MemoHistory);   PaintMemo(MemoReference);
+  PaintMemo(MemoSearch);    PaintMemo(MemoNotes);
+
+  PaintBox(ComboBox); PaintBox(BookBox); PaintBox(ChapterBox);
+
+  // the rest of the window: panels, toolbar, status bar, search box
+  if ThemeEnabled then
+    begin
+      Chrome := Blend(TextBackground, TextColor, 10);
+      ChromeText := TextColor;
+    end
+  else
+    begin
+      Chrome := clForm;
+      ChromeText := clDefault;
+    end;
+
+  PaintChrome(Self);
+  PaintChrome(PanelLeft); PaintChrome(Panel1); PaintChrome(Ruler); PaintChrome(ToolPanel);
+  PaintChrome(StandardToolBar); PaintChrome(StatusBar); PaintChrome(PageControl);
+  PaintChrome(TabSheetBible); PaintChrome(TabSheetSearch); PaintChrome(TabSheetCompare);
+  PaintChrome(TabSheetReference); PaintChrome(TabSheetCommentary);
+  PaintChrome(TabSheetDictionary); PaintChrome(TabSheetHistory); PaintChrome(TabSheetNotes);
+  PaintChrome(Splitter1);
+  ToolEdit.Color := TextBackground;
+  ToolEdit.Font.Color := TextColor;
+
+  ThemePopup;
+  ThemeWindow;
+
+  AssignFont;
+  if not reload then Exit;
+
+  Redraw;
+end;
+
+// Title bar, menu bar, tab headers and scroll bars (Windows only; see UnitChrome).
+procedure TMainForm.ThemeWindow;
+var
+  c : TColor;
+  dark : boolean;
+begin
+  c := ColorToRGB(TextBackground);
+  dark := ThemeEnabled and (Red(c) * 3 + Green(c) * 6 + Blue(c) < 1280);
+
+  ChromeUpdate(Self, PageControl, ThemeEnabled, Chrome, ChromeText, TextBackground, ThemeLink);
+
+  ChromeDarkScrollbars(BookBox, dark);
+  ChromeDarkScrollbars(ChapterBox, dark);
+  ChromeDarkScrollbars(ComboBox, dark);
+  ChromeDarkScrollbars(MemoBible, dark);
+  ChromeDarkScrollbars(MemoCompare, dark);
+  ChromeDarkScrollbars(MemoNotes, dark);
+  ChromeDarkScrollbars(MemoSearch, dark);
+  ChromeDarkScrollbars(MemoReference, dark);
+  ChromeDarkScrollbars(MemoCommentary, dark);
+  ChromeDarkScrollbars(MemoDictionary, dark);
+  ChromeDarkScrollbars(MemoHistory, dark);
+end;
+
+// Reloads what is on screen: colors and hidden footnotes are applied while the text is parsed.
+procedure TMainForm.Redraw;
+begin
+  ShowCurrVerse(False);
+  if PageControl.ActivePageIndex = apCompare then LoadCompare;
+  Repaint;
 end;
 
 procedure TMainForm.Localize;
@@ -1327,7 +1565,7 @@ end;
 
 procedure TMainForm.LoadChapter;
 begin
-  MemoBible.LoadText(Tools.Get_Chapter, true);
+  MemoBible.LoadText(ProcessNotes(Tools.Get_Chapter, True), true);
   SelectPage(apBible);
 end;
 
@@ -1368,7 +1606,7 @@ begin
   if CurrBible.NextVerse(CurrVerse, Next) then
     text += '  <l>' + CurrBible.VerseToStr(Next) + '</l> »';
   text += '<br> ';
-  text += Tools.Get_Compare;
+  text += ProcessNotes(Tools.Get_Compare, False);
   MemoCompare.LoadText(text);
   SelectPage(apCompare);
 end;
@@ -1433,6 +1671,7 @@ var text : string;
 begin
   text := Tools.Get_Strong(s);
   if text.isEmpty then Exit;
+  ThemePopup;
   NotifyForm.Title.Caption := T('Strong''s Dictionary');
   NotifyForm.Compact := True;
   NotifyForm.Memo.LoadHtml(text);
@@ -1445,11 +1684,108 @@ var text : string;
 begin
   text := Tools.Get_Footnote(s);
   if text.isEmpty then Exit;
+  ThemePopup;
   NotifyForm.Title.Caption := T('Footnote');
   NotifyForm.Compact := False;
   NotifyForm.Memo.LoadHtml(text);
   NotifyForm.ShowAtPos(Mouse.CursorPos);
   Self.SetFocus;
+end;
+
+// Grey notes are <n>...</n>. Hide removes them. Hover (Bible page only) replaces each one
+// with a numbered marker [+n] and keeps its text in GreyNotes for the hover popup.
+function TMainForm.ProcessNotes(const s: string; bible: boolean): string;
+var
+  a, b, start : integer;
+  marker : string;
+begin
+  Result := s;
+  GreyNotes.Clear;
+
+  if (NoteMode = noteShow) or ((NoteMode = noteHover) and not bible) then Exit;
+
+  start := 1;
+  while start <= Length(Result) do
+    begin
+      a := Pos('<n>', Copy(Result, start, MaxInt));
+      if a = 0 then Break;
+      a += start - 1;
+      b := Pos('</n>', Copy(Result, a, MaxInt));
+      if b = 0 then Break;
+      b += a - 1;
+
+      if NoteMode = noteHover then
+        begin
+          GreyNotes.Add(Copy(Result, a + 3, b - a - 3));
+          marker := '<n>[+' + ToStr(GreyNotes.Count) + ']</n>';
+          Delete(Result, a, b + 4 - a);
+          Insert(marker, Result, a);
+          start := a + Length(marker);
+        end
+      else
+        begin
+          Delete(Result, a, b + 4 - a);
+          // tidy the spacing left behind: "a  b" and "a ."
+          if (a > 1) and (a <= Length(Result)) and (Result[a-1] = ' ') and
+             (Result[a] in [' ', '.', ',', ';', ':', '!', '?', ')']) then
+            begin
+              Delete(Result, a-1, 1);
+              a -= 1;
+            end;
+          start := a;
+        end;
+    end;
+end;
+
+procedure TMainForm.MemoBibleMouseMove(Sender: TObject; Shift: TShiftState; X, Y: integer);
+var
+  index : integer;
+  Pos : TPoint;
+begin
+  if NoteMode <> noteHover then Exit;
+  if ssLeft in Shift then Exit; // selecting text
+
+  if not MemoBible.NoteAt(X, Y, index) or (index > GreyNotes.Count) then
+    begin
+      HoverIndex := 0; // the timer closes the popup shortly after the pointer has left
+      Exit;
+    end;
+
+  if HoverIndex = index then Exit; // already shown
+  HoverIndex := index;
+
+  ThemePopup;
+  NotifyForm.Title.Caption := T('Notes');
+  NotifyForm.Compact := False;
+  NotifyForm.Memo.LoadHtml(GreyNotes[index - 1]);
+
+  // below and to the right of the pointer, so the popup does not cover the marker
+  Pos := Mouse.CursorPos;
+  Pos.x += 14;
+  Pos.y += 18;
+  NotifyForm.ShowAtPos(Pos);
+  Self.SetFocus;
+  HoverTimer.Enabled := NotifyForm.Visible;
+end;
+
+procedure TMainForm.HoverTimerTick(Sender: TObject);
+var
+  Pos : TPoint;
+begin
+  if (not NotifyForm.Visible) or (NoteMode <> noteHover) or
+     (NotifyForm.Title.Caption <> T('Notes')) then
+    begin
+      HoverTimer.Enabled := False;
+      Exit;
+    end;
+
+  Pos := Mouse.CursorPos;
+  if (Pos.x >= NotifyForm.Left) and (Pos.x < NotifyForm.Left + NotifyForm.Width) and
+     (Pos.y >= NotifyForm.Top)  and (Pos.y < NotifyForm.Top + NotifyForm.Height) then Exit; // on the popup
+  if HoverIndex > 0 then Exit; // still on a marker
+
+  NotifyForm.Close;
+  HoverTimer.Enabled := False;
 end;
 
 {$ifdef windows}
@@ -1509,6 +1845,8 @@ begin
   IniFile.WriteString ('Application', 'Interface', Localization.id);
   IniFile.WriteString ('Application', 'FontName', Font.Name);
   IniFile.WriteInteger('Application', 'FontSize', Font.Size);
+  IniFile.WriteString ('Application', 'Theme', ThemeName);
+  IniFile.WriteInteger('Application', 'GreyNotes', NoteMode);
   IniFile.WriteBool('Copy', 'Abbreviate', CopyOptions.cvAbbreviate);
   IniFile.WriteBool('Copy', 'Enumerated', CopyOptions.cvEnumerated);
   IniFile.WriteBool('Copy', 'Guillemets', CopyOptions.cvGuillemets);
@@ -1542,6 +1880,8 @@ begin
   Localization.id := IniFile.ReadString('Application', 'Interface', Localization.DefaultID);
   Font.Name := IniFile.ReadString ('Application', 'FontName', Font.Name);
   Font.Size := IniFile.ReadInteger('Application', 'FontSize', Font.Size);
+  ThemeName := IniFile.ReadString ('Application', 'Theme', SystemThemeName);
+  NoteMode := IniFile.ReadInteger('Application', 'GreyNotes', noteShow);
   CopyOptions.cvAbbreviate := IniFile.ReadBool('Copy', 'Abbreviate', False);
   CopyOptions.cvEnumerated := IniFile.ReadBool('Copy', 'Enumerated', False);
   CopyOptions.cvGuillemets := IniFile.ReadBool('Copy', 'Guillemets', False);
