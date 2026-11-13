@@ -21,6 +21,10 @@ Changes in this fork
 - *Reading plan...* (Bookmarks menu): the Bible in a year, about three chapters a day. Tick the chapters you have read, see your progress, jump to the next unread chapter, or restart the plan.
 - *My highlights* and *My bookmarks* (Bookmarks menu) list those verses with their text in the order of the Bible; a click on a reference opens the verse.
 - The reading plan can be the Bible in a year, the New Testament in 90 days, or Psalms and Proverbs in 60 days. Chapters marked as read count in every plan.
+- *Note for this verse...* (Bookmarks menu) lets you write your own note for the selected verse. It is shown in italics after the verse, and *My notes* lists all of them. Notes are saved in `config.ini`.
+- *Read aloud* (F5, Windows): the chapter is read with the voice of the system, from the selected verse. Choose it again to stop.
+- *Chapter* submenu: *Copy chapter* (Ctrl+Shift+C) and *Save chapter as text file...*.
+- *My data* submenu: back up the bookmarks, highlights, notes and reading plan to a file, and restore them from one (for example on another computer).
 - Ctrl+G: jump to the reference box (type for example `John 3:16` and press Enter).
 - Options → *Line spacing*: normal, relaxed, wide or double, for the Bible and Compare pages.
 - Settings (font, size, theme, ...) are written to `config.ini` as soon as they are changed.

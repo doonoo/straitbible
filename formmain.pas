@@ -303,7 +303,20 @@ type
     miBookmarks : TMenuItem;
     BookmarkList : TStringList; // "book|chapter|number"
     HighlightList : TStringList; // "book|chapter|number=color" (color 1..5)
+    NoteList : TStringList;      // "book|chapter|number=text", the notes written by the user
+    Voice : Variant;             // Windows speech (SAPI), created when it is first needed
     FullScreenPrevious : TWindowState;
+    procedure SaveNotes;
+    procedure ReloadUserData;
+    function  InsertVerseNotes(const s: string): string;
+    procedure VerseNoteEdit(Sender: TObject);
+    procedure ShowMyNotes(Sender: TObject);
+    procedure ReadAloud(Sender: TObject);
+    function  ChapterPlainText: string;
+    procedure CopyChapter(Sender: TObject);
+    procedure SaveChapterText(Sender: TObject);
+    procedure BackupData(Sender: TObject);
+    procedure RestoreData(Sender: TObject);
     procedure SaveHighlights;
     procedure ApplyHighlight(number: integer);
     procedure ApplyHighlights;
@@ -346,7 +359,7 @@ var
 implementation
 
 uses
-  {$ifdef windows} UmParseWin, {$endif}
+  {$ifdef windows} UmParseWin, ComObj, {$endif} Variants,
   FormAbout, FormNotify, FormSearch, FormOptions, FormCopy, FormShelf,
   UnitTools, UnitLocal, UnitModule, UnitBible, UnitCommentary, UnitDictionary,
   UnitTheme, UnitFonts, UnitChrome, UnitChromeIcons, UnitPlan, FormPlan;
@@ -388,6 +401,38 @@ function IsDarkBackground(c: TColor): boolean;
 begin
   c := ColorToRGB(c);
   Result := Red(c) * 3 + Green(c) * 6 + Blue(c) < 1280;
+end;
+
+// a verse as plain text: no tags, no footnote markers
+function PlainVerse(s: string): string;
+var
+  a, b : integer;
+begin
+  repeat
+    a := Pos('<f>', s);
+    if a = 0 then Break;
+    b := Pos('</f>', s);
+    if b < a then Break;
+    Delete(s, a, b + 4 - a);
+  until False;
+  Result := Trim(RemoveTags(s));
+end;
+
+// copies (or replaces) one section of an ini file into another
+procedure CopySection(Source, Target: TIniFile; const Section: string);
+var
+  Keys : TStringList;
+  key : string;
+begin
+  Keys := TStringList.Create;
+  try
+    Source.ReadSection(Section, Keys);
+    Target.EraseSection(Section);
+    for key in Keys do
+      Target.WriteString(Section, key, Source.ReadString(Section, key, ''));
+  finally
+    Keys.Free;
+  end;
 end;
 
 type
@@ -524,6 +569,8 @@ begin
 
   BookmarkList := TStringList.Create;
   HighlightList := TStringList.Create;
+  NoteList := TStringList.Create;
+  Voice := Unassigned;
   miBookmarks := TMenuItem.Create(Self);
   miBookmarks.Caption := 'Bookmarks'; // translated later by Localize (T() is not ready yet)
   MainMenu.Items.Insert(MainMenu.Items.IndexOf(miHelp), miBookmarks);
@@ -567,6 +614,7 @@ begin
   GreyNotes.Free;
   BookmarkList.Free;
   HighlightList.Free;
+  NoteList.Free;
   Statuses.Free;
   Localization.Free;
 end;
@@ -820,7 +868,7 @@ end;
 procedure TMainForm.BuildBookmarkMenu;
 var
   i : integer;
-  Item, Remove, Highlight : TMenuItem;
+  Item, Remove, Highlight, Chapter, Backup : TMenuItem;
   colors : array [1..5] of string;
 begin
   if miBookmarks = nil then Exit;
@@ -844,10 +892,27 @@ begin
   Highlight.Add(Item);
 
   miBookmarks.Add(NewItem(T('Verse of the day'), 0, False, True, GoDailyVerse, 0, ''));
+  miBookmarks.Add(NewItem(T('Note for this verse') + '...', 0, False, True, VerseNoteEdit, 0, ''));
   miBookmarks.Add(NewItem(T('Reading plan') + '...', 0, False, True, ReadingPlanClick, 0, ''));
+  {$ifdef windows}
+    miBookmarks.Add(NewItem(T('Read aloud') + '  (F5)', ShortCut(VK_F5, []), False, True, ReadAloud, 0, ''));
+  {$endif}
   miBookmarks.Add(NewLine);
   miBookmarks.Add(NewItem(T('My highlights'), 0, False, True, ShowMyHighlights, 0, ''));
   miBookmarks.Add(NewItem(T('My bookmarks'), 0, False, True, ShowMyBookmarks, 0, ''));
+  miBookmarks.Add(NewItem(T('My notes'), 0, False, True, ShowMyNotes, 0, ''));
+
+  Chapter := TMenuItem.Create(miBookmarks);
+  Chapter.Caption := T('Chapter');
+  miBookmarks.Add(Chapter);
+  Chapter.Add(NewItem(T('Copy chapter'), ShortCut(VK_C, [ssCtrl, ssShift]), False, True, CopyChapter, 0, ''));
+  Chapter.Add(NewItem(T('Save chapter as text file') + '...', 0, False, True, SaveChapterText, 0, ''));
+
+  Backup := TMenuItem.Create(miBookmarks);
+  Backup.Caption := T('My data');
+  miBookmarks.Add(Backup);
+  Backup.Add(NewItem(T('Back up bookmarks, highlights and notes') + '...', 0, False, True, BackupData, 0, ''));
+  Backup.Add(NewItem(T('Restore from a backup') + '...', 0, False, True, RestoreData, 0, ''));
 
   if BookmarkList.Count > 0 then
     begin
@@ -1147,6 +1212,260 @@ end;
 procedure TMainForm.ShowMyBookmarks(Sender: TObject);
 begin
   ShowMyVerses(False);
+end;
+
+//--------------------------------- notes, speech, export, backup --------------------------------
+
+procedure TMainForm.SaveNotes;
+var
+  IniFile : TIniFile;
+  i : integer;
+begin
+  IniFile := TIniFile.Create(ConfigFile);
+  try
+    IniFile.EraseSection('VerseNotes');
+    IniFile.WriteInteger('VerseNotes', 'Count', NoteList.Count);
+    for i := 0 to NoteList.Count - 1 do
+      IniFile.WriteString('VerseNotes', 'Item_' + ToStr(i), NoteList.Names[i] + '|' + NoteList.ValueFromIndex[i]);
+  finally
+    IniFile.Free;
+  end;
+end;
+
+// puts the notes written by the user after their verses in the text of the chapter
+function TMainForm.InsertVerseNotes(const s: string): string;
+var
+  i, p, q : integer;
+  parts : TStringArray;
+  note : string;
+begin
+  Result := s;
+  for i := 0 to NoteList.Count - 1 do
+    begin
+      parts := NoteList.Names[i].Split('|');
+      if parts.Count < 3 then Continue;
+      if (ToInt(parts[0]) <> CurrVerse.book) or (ToInt(parts[1]) <> CurrVerse.chapter) then Continue;
+
+      p := Pos('<l> ' + parts[2] + '</l> ', Result);
+      if p = 0 then Continue;
+      q := Pos('<br>', Copy(Result, p, MaxInt));
+      if q = 0 then Continue;
+
+      note := NoteList.ValueFromIndex[i].Replace('<', '(').Replace('>', ')');
+      Insert(' <i>[' + T('My note') + ': ' + note + ']</i>', Result, p + q - 1);
+    end;
+end;
+
+procedure TMainForm.VerseNoteEdit(Sender: TObject);
+var
+  key, value : string;
+  i : integer;
+begin
+  key := ToStr(CurrVerse.book) + '|' + ToStr(CurrVerse.chapter) + '|' + ToStr(CurrVerse.number);
+  i := NoteList.IndexOfName(key);
+  if i >= 0 then value := NoteList.ValueFromIndex[i] else value := '';
+
+  if not InputQuery(T('Note for this verse'), CurrBible.VerseToStr(CurrVerse), value) then Exit;
+
+  value := Trim(value.Replace(#13, ' ').Replace(#10, ' '));
+  if i >= 0 then NoteList.Delete(i);
+  if not value.IsEmpty then NoteList.Values[key] := value;
+  SaveNotes;
+  ShowCurrVerse(True);
+end;
+
+procedure TMainForm.ShowMyNotes(Sender: TObject);
+var
+  Sorted : TStringList;
+  i : integer;
+  parts : TStringArray;
+  Verse : TVerse;
+  text, line, key : string;
+begin
+  Sorted := TStringList.Create;
+  try
+    for i := 0 to NoteList.Count - 1 do
+      begin
+        parts := NoteList.Names[i].Split('|');
+        if parts.Count < 3 then Continue;
+        Sorted.Add(Format('%.3d%.3d%.3d', [ToInt(parts[0]), ToInt(parts[1]), ToInt(parts[2])]) +
+          '|' + NoteList.Names[i]);
+      end;
+    Sorted.Sort;
+
+    text := '';
+    for line in Sorted do
+      begin
+        parts := line.Split('|'); // sort key, book, chapter, verse
+        if parts.Count < 4 then Continue;
+        key := parts[1] + '|' + parts[2] + '|' + parts[3];
+        Verse := ParseBookmark(key);
+        text += '<l>' + CurrBible.VerseToStr(Verse) + '</l> ' + ''.Join(' ', CurrBible.GetRange(Verse)) +
+                '<br><i>' + T('My note') + ': ' + NoteList.Values[key].Replace('<', '(').Replace('>', ')') +
+                '</i><br><br>';
+      end;
+
+    if text.IsEmpty then text := T('There are no notes yet.');
+
+    MemoSearch.LoadText(text);
+    SelectPage(apSearch);
+    UpdateStatus(ToStr(Sorted.Count) + ' ' + T('verses'));
+  finally
+    Sorted.Free;
+  end;
+end;
+
+// Windows: reads the chapter aloud with the voice of the system, from the selected verse.
+// Choosing it again while it is reading stops it.
+procedure TMainForm.ReadAloud(Sender: TObject);
+{$ifdef windows}
+var
+  Strings : TStringArray;
+  i : integer;
+  text : string;
+begin
+  try
+    if VarIsEmpty(Voice) then Voice := CreateOleObject('SAPI.SpVoice');
+
+    if Voice.Status.RunningState = 2 then // it is speaking
+      begin
+        Voice.Speak(WideString(''), 3);   // 3 = asynchronous + purge what is queued
+        Exit;
+      end;
+
+    Strings := CurrBible.GetChapter(CurrVerse.book, CurrVerse.chapter);
+    text := '';
+    for i := CurrVerse.number - 1 to High(Strings) do
+      if i >= 0 then text += PlainVerse(Strings[i]) + ' ';
+
+    Voice.Speak(UTF8Decode(text), 1);     // 1 = asynchronous
+  except
+    on E: Exception do ShowMessage(T('Speech is not available.') + ' ' + E.Message);
+  end;
+end;
+{$else}
+begin
+end;
+{$endif}
+
+function TMainForm.ChapterPlainText: string;
+var
+  Strings : TStringArray;
+  Book : TBook;
+  i : integer;
+begin
+  Result := '';
+  Book := CurrBible.BookByNum(CurrVerse.book);
+  if Assigned(Book) then Result := Book.title + ' ' + ToStr(CurrVerse.chapter) + LineEnding + LineEnding;
+
+  Strings := CurrBible.GetChapter(CurrVerse.book, CurrVerse.chapter);
+  for i := Low(Strings) to High(Strings) do
+    Result += ToStr(i + 1) + ' ' + PlainVerse(Strings[i]) + LineEnding;
+
+  Result += LineEnding + CurrBible.Name + LineEnding;
+end;
+
+procedure TMainForm.CopyChapter(Sender: TObject);
+begin
+  Clipboard.AsText := ChapterPlainText;
+  UpdateStatus(T('Chapter copied'));
+end;
+
+procedure TMainForm.SaveChapterText(Sender: TObject);
+var
+  Dlg : TSaveDialog;
+  List : TStringList;
+  Book : TBook;
+begin
+  Dlg := TSaveDialog.Create(Self);
+  try
+    Dlg.Filter := 'Text (*.txt)|*.txt';
+    Dlg.DefaultExt := 'txt';
+    Dlg.InitialDir := DocumentsPath;
+    Dlg.Options := Dlg.Options + [ofOverwritePrompt];
+    Book := CurrBible.BookByNum(CurrVerse.book);
+    if Assigned(Book) then Dlg.FileName := Book.title + ' ' + ToStr(CurrVerse.chapter) + '.txt';
+
+    if not Dlg.Execute then Exit;
+
+    List := TStringList.Create;
+    try
+      List.Text := ChapterPlainText;
+      List.SaveToFile(Dlg.FileName);
+    finally
+      List.Free;
+    end;
+    UpdateStatus(T('Saved') + ': ' + Dlg.FileName);
+  finally
+    Dlg.Free;
+  end;
+end;
+
+procedure TMainForm.BackupData(Sender: TObject);
+var
+  Dlg : TSaveDialog;
+  Source, Target : TIniFile;
+  section : string;
+begin
+  Dlg := TSaveDialog.Create(Self);
+  try
+    Dlg.Filter := 'Backup (*.ini)|*.ini';
+    Dlg.DefaultExt := 'ini';
+    Dlg.FileName := 'unbound-bible-backup.ini';
+    Dlg.InitialDir := DocumentsPath;
+    Dlg.Options := Dlg.Options + [ofOverwritePrompt];
+    if not Dlg.Execute then Exit;
+
+    SaveSettings;
+    Source := TIniFile.Create(ConfigFile);
+    Target := TIniFile.Create(Dlg.FileName);
+    try
+      for section in ['Bookmarks', 'Highlights', 'VerseNotes', 'Plan'] do
+        CopySection(Source, Target, section);
+    finally
+      Target.Free;
+      Source.Free;
+    end;
+    UpdateStatus(T('Saved') + ': ' + Dlg.FileName);
+  finally
+    Dlg.Free;
+  end;
+end;
+
+procedure TMainForm.RestoreData(Sender: TObject);
+var
+  Dlg : TOpenDialog;
+  Source, Target : TIniFile;
+  section : string;
+begin
+  Dlg := TOpenDialog.Create(Self);
+  try
+    Dlg.Filter := 'Backup (*.ini)|*.ini';
+    Dlg.InitialDir := DocumentsPath;
+    Dlg.Options := Dlg.Options + [ofFileMustExist];
+    if not Dlg.Execute then Exit;
+
+    if MessageDlg(T('Restore from a backup'),
+         T('Replace your bookmarks, highlights, notes and reading plan with the ones in this file?'),
+         mtConfirmation, [mbYes, mbNo], 0) <> mrYes then Exit;
+
+    Source := TIniFile.Create(Dlg.FileName);
+    Target := TIniFile.Create(ConfigFile);
+    try
+      for section in ['Bookmarks', 'Highlights', 'VerseNotes', 'Plan'] do
+        if Source.SectionExists(section) then CopySection(Source, Target, section);
+    finally
+      Target.Free;
+      Source.Free;
+    end;
+
+    ReloadUserData;
+    BuildBookmarkMenu;
+    ShowCurrVerse(False);
+    UpdateStatus(T('Restored'));
+  finally
+    Dlg.Free;
+  end;
 end;
 
 procedure TMainForm.ToggleFullScreen;
@@ -2123,7 +2442,7 @@ end;
 
 procedure TMainForm.LoadChapter;
 begin
-  MemoBible.LoadText(ProcessNotes(Tools.Get_Chapter, True), true);
+  MemoBible.LoadText(ProcessNotes(InsertVerseNotes(Tools.Get_Chapter), True), true);
   ApplySpacing(MemoBible);
   ApplyHighlights;
   SelectPage(apBible);
@@ -2432,7 +2751,6 @@ procedure TMainForm.ReadConfig;
 var
   IniFile : TIniFile;
   i, Count : integer;
-  parts : TStringArray;
 begin
   IniFile := TIniFile.Create(ConfigFile);
 
@@ -2464,20 +2782,52 @@ begin
   for i := 0 to Count - 1 do
     RecentList.Add(IniFile.ReadString('Recent', 'File_' + ToStr(i), ''));
 
-  Count := IniFile.ReadInteger('Highlights', 'Count', 0);
-  for i := 0 to Count - 1 do
-    begin
-      parts := IniFile.ReadString('Highlights', 'Item_' + ToStr(i), '').Split('|');
-      if parts.Count = 4 then
-        HighlightList.Values[parts[0] + '|' + parts[1] + '|' + parts[2]] := parts[3];
-    end;
-
-  Count := IniFile.ReadInteger('Bookmarks', 'Count', 0);
-  for i := 0 to Count - 1 do
-    if not IniFile.ReadString('Bookmarks', 'Item_' + ToStr(i), '').IsEmpty then
-      BookmarkList.Add(IniFile.ReadString('Bookmarks', 'Item_' + ToStr(i), ''));
-
   IniFile.Free;
+  ReloadUserData;
+end;
+
+// Reads the bookmarks, highlights, notes and the reading plan from config.ini (again).
+procedure TMainForm.ReloadUserData;
+var
+  IniFile : TIniFile;
+  i, Count : integer;
+  parts : TStringArray;
+  text : string;
+begin
+  BookmarkList.Clear;
+  HighlightList.Clear;
+  NoteList.Clear;
+
+  IniFile := TIniFile.Create(ConfigFile);
+  try
+    Count := IniFile.ReadInteger('Highlights', 'Count', 0);
+    for i := 0 to Count - 1 do
+      begin
+        parts := IniFile.ReadString('Highlights', 'Item_' + ToStr(i), '').Split('|');
+        if parts.Count = 4 then
+          HighlightList.Values[parts[0] + '|' + parts[1] + '|' + parts[2]] := parts[3];
+      end;
+
+    Count := IniFile.ReadInteger('Bookmarks', 'Count', 0);
+    for i := 0 to Count - 1 do
+      if not IniFile.ReadString('Bookmarks', 'Item_' + ToStr(i), '').IsEmpty then
+        BookmarkList.Add(IniFile.ReadString('Bookmarks', 'Item_' + ToStr(i), ''));
+
+    // a note is stored as "book|chapter|verse|text"; the text may contain "|" itself
+    Count := IniFile.ReadInteger('VerseNotes', 'Count', 0);
+    for i := 0 to Count - 1 do
+      begin
+        text := IniFile.ReadString('VerseNotes', 'Item_' + ToStr(i), '');
+        parts := text.Split('|');
+        if parts.Count < 4 then Continue;
+        NoteList.Values[parts[0] + '|' + parts[1] + '|' + parts[2]] :=
+          Copy(text, Length(parts[0]) + Length(parts[1]) + Length(parts[2]) + 4, MaxInt);
+      end;
+
+    PlanLoad(IniFile);
+  finally
+    IniFile.Free;
+  end;
 end;
 
 end.
