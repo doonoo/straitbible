@@ -7,6 +7,8 @@ unit UnitFonts;
 // Windows: fonts are registered privately for this process (nothing is installed).
 // Linux:   fonts are copied to ~/.local/share/fonts/straitbible and the font cache is
 //          refreshed; they become visible the next time the application starts.
+// macOS:   fonts are copied to ~/Library/Fonts/StraitBible; they become visible the next
+//          time the application starts.
 
 interface
 
@@ -21,7 +23,7 @@ function InstallFont(const FileName: string): boolean;
 implementation
 
 uses
-  Forms, FileUtil, LazFileUtils, UnitUtils
+  Forms, FileUtil, LazFileUtils, UnitUtils, UnitLib
   {$ifdef windows}, Windows {$endif}
   {$ifdef unix}, Process {$endif};
 
@@ -39,20 +41,26 @@ end;
 
 function BundledFontsPath: string;
 begin
-  Result := Application.Location + 'fonts';
+  Result := SharePath + 'fonts';
 end;
 
 {$ifdef unix}
 function SystemFontsPath: string;
 begin
-  Result := GetUserDir + '.local/share/fonts/straitbible';
+  {$ifdef darwin}
+    Result := GetUserDir + 'Library/Fonts/StraitBible';  // macOS finds fonts in sub folders of this folder
+  {$else}
+    Result := GetUserDir + '.local/share/fonts/straitbible';
+  {$endif}
 end;
 
 procedure RefreshFontCache;
 var
   s : string = '';
 begin
-  try RunCommand('fc-cache', ['-f', SystemFontsPath], s); except end;
+  {$ifndef darwin}
+    try RunCommand('fc-cache', ['-f', SystemFontsPath], s); except end;
+  {$endif}
 end;
 {$endif}
 

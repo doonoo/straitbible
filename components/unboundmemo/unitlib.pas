@@ -377,6 +377,11 @@ begin
   {$ifdef linux}
     if Prefix('/usr',Result) then Result := '/usr/share/' + Application.Title + '/';
   {$endif}
+  {$ifdef darwin}
+    // inside an application bundle the data is in Contents/Resources, next to Contents/MacOS
+    if Pos('.app/Contents/MacOS', Result) > 0 then
+      Result := ExpandFileName(Result + '../Resources') + '/';
+  {$endif}
 end;
 
 function DocumentsPath: string;

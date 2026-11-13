@@ -31,3 +31,4 @@ unboundbible
 straitbible
 Rubbish/*
 !packaging/*.sh
+!packaging/**/*.sh

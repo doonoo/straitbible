@@ -1,0 +1,125 @@
+# Builds Strait Bible for Linux (x86_64 tarball and .deb), for macOS (Apple Silicon .dmg), and tests the Arch package.
+# For a tag such as v6.1 the results are attached to the GitHub release of that tag.
+# It runs when started by hand (Actions tab -> Run workflow) or when a tag is pushed.
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lazarus and Free Pascal
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lazarus fpc libgtk2.0-dev libsqlite3-dev
+
+      - name: Get ZeosLib 7.2 (the 8.0 branch needs a newer compiler)
+        run: git clone --depth 1 --branch 7.2.14-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
+
+      - name: Build
+        run: sh packaging/build-linux.sh "$RUNNER_TEMP/zeoslib"
+
+      - name: Tarball and .deb
+        run: |
+          VERSION=$(sed -n "s/.*ApplicationVersion = '\(.*\)';/\1/p" unitutils.pas)
+          sh packaging/install-linux.sh "$PWD/dist" /usr
+          tar -C dist -czf straitbible-linux-x86_64.tar.gz usr
+          mkdir -p dist/DEBIAN
+          cat > dist/DEBIAN/control <<EOF
+          Package: straitbible
+          Version: $VERSION
+          Architecture: amd64
+          Maintainer: Strait Bible contributors <noreply@users.noreply.github.com>
+          Depends: libgtk2.0-0, libsqlite3-0
+          Section: text
+          Priority: optional
+          Homepage: https://github.com/doonoo/straitbible
+          Description: Free multilingual Bible reader
+           Strait Bible reads, compares and studies the Bible in many translations,
+           with themes, bookmarks, highlights, notes and reading plans.
+           It is based on Unbound Bible by Vladimir Rybant.
+          EOF
+          dpkg-deb --build --root-owner-group dist "straitbible_${VERSION}_amd64.deb"
+          dpkg-deb --info "straitbible_${VERSION}_amd64.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            straitbible-linux-x86_64.tar.gz
+            straitbible_*_amd64.deb
+
+      - name: Attach to the release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            straitbible-linux-x86_64.tar.gz
+            straitbible_*_amd64.deb
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Free Pascal and Lazarus 4.8
+        run: |
+          wget -q "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20x86-64/Lazarus%204.8/fpc-3.2.4rc1a.intelarm64-macosx.dmg" -O "$RUNNER_TEMP/fpc.dmg"
+          wget -q "https://sourceforge.net/projects/lazarus/files/Lazarus%20macOS%20aarch64/Lazarus%204.8/lazarus-darwin-aarch64-4.8.zip" -O "$RUNNER_TEMP/lazarus.zip"
+          sudo hdiutil attach "$RUNNER_TEMP/fpc.dmg"
+          FPC_VOL=$(ls -d /Volumes/fpc* | head -1)
+          FPC_PKG=$(find "$FPC_VOL" -maxdepth 1 -name "*.pkg" | head -1)
+          sudo installer -package "$FPC_PKG" -target /
+          sudo hdiutil detach "$FPC_VOL"
+          xattr -cr "$RUNNER_TEMP/lazarus.zip"
+          unzip -q "$RUNNER_TEMP/lazarus.zip" -d "$RUNNER_TEMP"
+          echo "LAZARUS_DIR=$RUNNER_TEMP/lazarus" >> "$GITHUB_ENV"
+          fpc -iV
+
+      - name: Get ZeosLib 7.2
+        run: git clone --depth 1 --branch 7.2.14-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
+
+      - name: Build
+        run: sh packaging/build-macos.sh "$RUNNER_TEMP/zeoslib"
+
+      - name: Application bundle and .dmg
+        run: sh packaging/macos/make-app.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*.dmg
+
+      - name: Attach to the release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.dmg
+
+  arch:
+    # builds the AUR package in a clean Arch Linux, to know that it works before it is uploaded
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install the tools
+        run: pacman -Syu --noconfirm git sudo fpc lazarus gtk2 sqlite
+
+      - name: Build the package
+        run: |
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+          git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY}.git" /home/builder/src
+          chown -R builder /home/builder/src
+          cd /home/builder/src/packaging/arch
+          su builder -c "makepkg -s --noconfirm"
+          ls -la *.pkg.tar.*

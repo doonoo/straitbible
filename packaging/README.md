@@ -42,6 +42,6 @@ repository, check that every module may be redistributed, or build a smaller pac
 
 ## Prebuilt Linux download
 
-`.github/workflows/linux-build.yml` builds the program on GitHub (Ubuntu 22.04) and produces
-`straitbible-linux-x86_64.tar.gz`. Start it from the Actions tab of the repository ("Linux build" -> "Run workflow"), or
+`.github/workflows/build.yml` builds the program on GitHub: for Linux (Ubuntu 22.04) it produces
+`straitbible-linux-x86_64.tar.gz` and a `.deb`, for macOS a `.dmg` (Apple Silicon), and it builds the Arch package in a clean Arch Linux. Start it from the Actions tab of the repository ("Build" -> "Run workflow"), or
 push a tag such as `v1.0` and the file is attached to a release. It has not been run yet.
