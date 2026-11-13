@@ -84,6 +84,8 @@ jobs:
           xattr -cr "$RUNNER_TEMP/lazarus.zip"
           unzip -q "$RUNNER_TEMP/lazarus.zip" -d "$RUNNER_TEMP"
           echo "LAZARUS_DIR=$RUNNER_TEMP/lazarus" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/lazarus" >> "$GITHUB_PATH"
+          sudo ln -sf "$RUNNER_TEMP/lazarus/lazbuild" /usr/local/bin/lazbuild
           fpc -iV
 
       - name: Get ZeosLib 7.2
@@ -112,12 +114,16 @@ jobs:
     container: archlinux:base-devel
     steps:
       - name: Install the tools
-        run: pacman -Syu --noconfirm git sudo fpc lazarus gtk2 sqlite
+        run: |
+          pacman -Syu --noconfirm git sudo fpc lazarus sqlite
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+      - name: Build GTK 2 from the AUR (it is not in the official repositories any more)
+        run: su builder -c "git clone https://aur.archlinux.org/gtk2.git /home/builder/gtk2 && cd /home/builder/gtk2 && makepkg -si --noconfirm"
 
       - name: Build the package
         run: |
-          useradd -m builder
-          echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
           git clone --depth 1 "https://github.com/${GITHUB_REPOSITORY}.git" /home/builder/src
           chown -R builder /home/builder/src
           cd /home/builder/src/packaging/arch
