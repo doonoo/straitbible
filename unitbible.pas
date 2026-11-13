@@ -55,6 +55,7 @@ type
     function GetAll(raw: boolean = false): TStringArray;
     function GoodLink(Verse: TVerse): boolean;
     function NextVerse(Verse: TVerse; out Next: TVerse): boolean;
+    function PrevVerse(Verse: TVerse; out Prev: TVerse): boolean;
     function Search(searchString: string; Options: TSearchOptions; Range: TRange): TStringArray;
     procedure ShowTags;
     function GetTitles: TStringArray;
@@ -411,6 +412,40 @@ begin
       end;
 
   Next := Verse;
+  Result := False;
+end;
+
+function TBible.PrevVerse(Verse: TVerse; out Prev: TVerse): boolean;
+var
+  i : integer;
+begin
+  Result := True;
+  Prev := Verse;
+  Prev.count := 1;
+
+  if Verse.number > 1 then                         // previous verse in chapter
+    begin
+      Prev.number := Verse.number - 1;
+      if GoodLink(Prev) then Exit;
+    end;
+
+  if Verse.chapter > 1 then                        // last verse of previous chapter
+    begin
+      Prev.chapter := Verse.chapter - 1;
+      Prev.number := VersesCount(Prev);
+      if GoodLink(Prev) then Exit;
+    end;
+
+  for i := 1 to Books.Count - 1 do                 // last verse of previous book
+    if Books[i].number = Verse.book then
+      begin
+        Prev.book := Books[i-1].number;
+        Prev.chapter := ChaptersCount(Prev.book);
+        Prev.number := VersesCount(Prev);
+        if GoodLink(Prev) then Exit;
+      end;
+
+  Prev := Verse;
   Result := False;
 end;
 

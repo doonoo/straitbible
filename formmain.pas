@@ -1359,9 +1359,12 @@ end;
 procedure TMainForm.LoadCompare;
 var
   text : string;
-  Next : TVerse;
+  Next, Prev : TVerse;
 begin
-  text := CurrBible.VerseToStr(CurrVerse);
+  text := '';
+  if CurrBible.PrevVerse(CurrVerse, Prev) then
+    text += '« <l>' + CurrBible.VerseToStr(Prev) + '</l>  ';
+  text += CurrBible.VerseToStr(CurrVerse);
   if CurrBible.NextVerse(CurrVerse, Next) then
     text += '  <l>' + CurrBible.VerseToStr(Next) + '</l> »';
   text += '<br> ';
