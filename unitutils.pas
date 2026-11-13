@@ -6,7 +6,11 @@ uses
   Classes, Forms, SysUtils, Graphics, FileUtil, Zipper, UnitLib;
 
 const
-  ApplicationName = 'Unbound Bible';
+  ApplicationName = 'Strait Bible';
+  LegacyName = 'Unbound Bible';   // the name of the program this one is based on (see README);
+                                  // a folder with this name that already exists keeps being used
+  ProjectURL = 'https://github.com/doonoo/unboundbible';
+  OriginalURL = 'https://github.com/vrybant/unboundbible';
   ApplicationVersion = '5.4';
   LangDirectory = 'localization';
   Untitled = 'Untitled';
@@ -51,12 +55,18 @@ begin
   Result := Application.Location + 'data';
 end;
 
+// The folder of the Bibles. People who used "Unbound Bible" before keep their folder (and their
+// Bibles, notes and settings); new users get a folder named after this program.
 function DataPath: string;
 begin
   if IsPortable then
     Result := PortableDataPath
   else
-    Result := GetUserDir + ApplicationName;
+    begin
+      Result := GetUserDir + ApplicationName;
+      if not DirectoryExists(Result) and DirectoryExists(GetUserDir + LegacyName) then
+        Result := GetUserDir + LegacyName;
+    end;
 end;
 
 function DatabaseList: TStringArray;
@@ -82,8 +92,16 @@ begin
     Result := Application.Location + Slash + 'configs'
   else
     begin
-      {$ifdef windows} Result := LocalAppDataPath + ApplicationName;  {$endif}
-      {$ifdef unix}    Result := GetUserDir + '.config/unboundbible'; {$endif}
+      {$ifdef windows}
+        Result := LocalAppDataPath + ApplicationName;
+        if not DirectoryExists(Result) and DirectoryExists(LocalAppDataPath + LegacyName) then
+          Result := LocalAppDataPath + LegacyName;
+      {$endif}
+      {$ifdef unix}
+        Result := GetUserDir + '.config/straitbible';
+        if not DirectoryExists(Result) and DirectoryExists(GetUserDir + '.config/unboundbible') then
+          Result := GetUserDir + '.config/unboundbible';
+      {$endif}
     end;
 end;
 
@@ -110,19 +128,20 @@ end;
 
 function HomeURL: string;
 begin
-  Result := 'https://unboundbible.net/' + ru;
+  Result := ProjectURL;
 end;
 
 function DownloadsURL: string;
 begin
-  Result := 'https://unboundbible.net/goto/ubdownload' + ru + '.php';
+  Result := ProjectURL + '/releases';
 end;
 
 function IssueURL: string;
 begin
-  Result := 'https://unboundbible.net/goto/contact' + ru + '.php'
+  Result := ProjectURL + '/issues';
 end;
 
+// Donations go to the author of the program this one is based on.
 function DonateURL: string;
 begin
   Result := 'https://unboundbible.net/goto/donate' + ru + '.php'

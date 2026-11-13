@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Strait Bible: a big gate with a small scroll behind it ("strait is the gate", Matthew 7:13-14) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B3A57"/>
+      <stop offset="1" stop-color="#0A1626"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="128" cy="135" r="95" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE9A8" stop-opacity="0.31"/>
+      <stop offset="1" stop-color="#FFE9A8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheet" x1="92" y1="0" x2="164" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6E9C4"/>
+      <stop offset="1" stop-color="#E8D3A0"/>
+    </linearGradient>
+    <linearGradient id="roll" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7E9BA"/>
+      <stop offset="0.55" stop-color="#D9BF84"/>
+      <stop offset="1" stop-color="#A98B4E"/>
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E7B552"/>
+      <stop offset="1" stop-color="#9A6A1E"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="248" height="248" rx="54" fill="url(#bg)"/>
+  <ellipse cx="128" cy="135" rx="88" ry="95" fill="url(#glow)"/>
+
+  <!-- the scroll: small, behind the gate -->
+  <rect x="94" y="96" width="68" height="100" fill="url(#sheet)"/>
+  <g fill="#9A7B44" fill-opacity="0.67">
+    <rect x="103" y="112" width="50" height="4" rx="2"/>
+    <rect x="103" y="126" width="42" height="4" rx="2"/>
+    <rect x="103" y="140" width="50" height="4" rx="2"/>
+    <rect x="103" y="154" width="36" height="4" rx="2"/>
+    <rect x="103" y="168" width="46" height="4" rx="2"/>
+  </g>
+  <g>
+    <rect x="86" y="84" width="84" height="20" rx="10" fill="url(#roll)" stroke="#8A6D36" stroke-opacity="0.8" stroke-width="1.5"/>
+    <ellipse cx="92.5" cy="94" rx="3.5" ry="6" fill="#8A6D36" fill-opacity="0.59"/>
+    <ellipse cx="163.5" cy="94" rx="3.5" ry="6" fill="#8A6D36" fill-opacity="0.59"/>
+    <rect x="86" y="188" width="84" height="20" rx="10" fill="url(#roll)" stroke="#8A6D36" stroke-opacity="0.8" stroke-width="1.5"/>
+    <ellipse cx="92.5" cy="198" rx="3.5" ry="6" fill="#8A6D36" fill-opacity="0.59"/>
+    <ellipse cx="163.5" cy="198" rx="3.5" ry="6" fill="#8A6D36" fill-opacity="0.59"/>
+  </g>
+
+  <!-- the gate: big, an arch with two leaves, ajar -->
+  <path d="M48 232 V118 A80 80 0 0 1 208 118 V232" fill="none" stroke="#3B2508" stroke-opacity="0.92" stroke-width="30" stroke-linejoin="round"/>
+  <path d="M48 232 V118 A80 80 0 0 1 208 118 V232" fill="none" stroke="#E7B552" stroke-width="21" stroke-linejoin="round"/>
+  <path d="M42 230 V118 A86 86 0 0 1 128 32" fill="none" stroke="#FFE8A6" stroke-opacity="0.75" stroke-width="5"/>
+
+  <g>
+    <g stroke="#3B2508" stroke-opacity="0.92" stroke-width="11">
+      <line x1="88" y1="66.6" x2="88" y2="224"/>
+      <line x1="104" y1="58.2" x2="104" y2="224"/>
+      <line x1="152" y1="58.2" x2="152" y2="224"/>
+      <line x1="168" y1="66.6" x2="168" y2="224"/>
+    </g>
+    <g stroke="#D9A441" stroke-width="5">
+      <line x1="88" y1="66.6" x2="88" y2="224"/>
+      <line x1="104" y1="58.2" x2="104" y2="224"/>
+      <line x1="152" y1="58.2" x2="152" y2="224"/>
+      <line x1="168" y1="66.6" x2="168" y2="224"/>
+    </g>
+  </g>
+
+  <polygon points="113,26 143,26 138,54 118,54" fill="#F2C968" stroke="#3B2508" stroke-opacity="0.92" stroke-width="3"/>
+  <rect x="32" y="224" width="192" height="20" rx="7" fill="url(#base)" stroke="#3B2508" stroke-opacity="0.92" stroke-width="3"/>
+</svg>

@@ -9,16 +9,15 @@ type
   { TAboutBox }
 
   TAboutBox = class(TForm)
-    ImageTwitter: TImage;
     LabelGPL: TLabel;
     LabelName: TLabel;
-    LabelTeam: TLabel;
+    LabelBased: TLabel;
+    LabelProject: TLabel;
     LabelVersion: TLabel;
-    ImageFacebook: TImage;
     Image: TImage;
     procedure FormCreate(Sender: TObject);
-    procedure ImageTwitterClick(Sender: TObject);
-    procedure ImageFacebookClick(Sender: TObject);
+    procedure LabelBasedClick(Sender: TObject);
+    procedure LabelProjectClick(Sender: TObject);
   public
     procedure Localize;
   end;
@@ -34,32 +33,25 @@ uses UnitUtils, UnitLocal;
 
 procedure TAboutBox.FormCreate(Sender: TObject);
 begin
-  {$ifdef linux} Width := 390; {$endif}
+  LabelName.Caption := ApplicationName;
 end;
 
 procedure TAboutBox.Localize;
-var
-  Developer : string;
 begin
-  Developer := ' ' + 'Vladimir Rybant';
-
-  if Localization.id = 'ru' then Developer := 'Владимир Рыбант';
-  if Localization.id = 'uk' then Developer := 'Володимир Рiбант';
-
   Caption := ' ' + T('About');
   LabelVersion.Caption := T('Version') + ' ' + ApplicationVersion;
-  LabelTeam.Caption := T('Developer') + ': ' + Developer;
+  LabelBased.Caption := T('Based on Unbound Bible by Vladimir Rybant');
 end;
 
-procedure TAboutBox.ImageFacebookClick(Sender: TObject);
+// the program this one is based on
+procedure TAboutBox.LabelBasedClick(Sender: TObject);
 begin
-  OpenURL('http://www.facebook.com/unboundbible/');
+  OpenURL(OriginalURL);
 end;
 
-procedure TAboutBox.ImageTwitterClick(Sender: TObject);
+procedure TAboutBox.LabelProjectClick(Sender: TObject);
 begin
-  OpenURL('https://twitter.com/unboundbible/');
+  OpenURL(ProjectURL);
 end;
 
 end.
-

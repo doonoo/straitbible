@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Height = 451
   Top = 305
   Width = 1029
-  Caption = 'Unbound Bible'
+  Caption = 'Strait Bible'
   ClientHeight = 431
   ClientWidth = 1029
   Constraints.MinHeight = 400

@@ -1,24 +1,24 @@
 [DEBREATE-0.7.13]
 <<CTRL>>
-Package: unboundbible
+Package: straitbible
 Version: 5.4
-Maintainer: Vladimir Rybant <vrybant@gmail.com>
+Maintainer: doonoo <your-email@example.com>
 Section: text
-Homepage: https://unboundbible.net
+Homepage: https://github.com/doonoo/unboundbible
 Architecture: amd64
 Priority: standard
 Depends: libc6 (>=2.4), libsqlite3-0 (>=3.5.9), libgtk2.0-0 (>=2.6.0)
 Description: Open Source Bible Application
- Unbound Bible is an open source and free, multilingual Bible software.
+ Strait Bible is an open source and free, multilingual Bible software (based on Unbound Bible by Vladimir Rybant).
 
 <</CTRL>>
 <<FILES>>
 1
-/home/vladimir/Dropbox/unboundbible/unboundbible* -> unboundbible -> /usr/bin
-/home/vladimir/Dropbox/unboundbible/unboundbible.png -> unboundbible.png -> /usr/share/pixmaps
-/home/vladimir/Dropbox/unboundbible/modules -> modules -> /usr/share/unboundbible
-/home/vladimir/Dropbox/unboundbible/titles -> titles -> /usr/share/unboundbible
-/home/vladimir/Dropbox/unboundbible/localization -> localization -> /usr/share/unboundbible
+/path/to/straitbible/straitbible* -> straitbible -> /usr/bin
+/path/to/straitbible/straitbible.png -> straitbible.png -> /usr/share/pixmaps
+/path/to/straitbible/modules -> modules -> /usr/share/straitbible
+/path/to/straitbible/titles -> titles -> /usr/share/straitbible
+/path/to/straitbible/localization -> localization -> /usr/share/straitbible
 <</FILES>>
 <<SCRIPTS>>
 <<PREINST>>
@@ -36,48 +36,48 @@ Description: Open Source Bible Application
 <</SCRIPTS>>
 <<CHANGELOG>>
 <<DEST>>DEFAULT<</DEST>>
-unboundbible (5.4) ; urgency=medium
+straitbible (5.4) ; urgency=medium
 
   * Added some improvements.
   * Fixed some bugs.
 
  -- November 2022
 
-unboundbible (5.3) ; urgency=low
+straitbible (5.3) ; urgency=low
 
   * Fixed some bugs.
   * Added some improvements.
 
  -- Mart 2021 
 
-unboundbible (5.2) ; urgency=medium
+straitbible (5.2) ; urgency=medium
 
   * Added black theme support.
   * Fixed some bugs.
 
  -- February 2021
 
-unboundbible (5.1) ; urgency=medium
+straitbible (5.1) ; urgency=medium
 
   * Fixed some bugs.
 
  -- September 2020 
 
-unboundbible (5.0) ; urgency=medium
+straitbible (5.0) ; urgency=medium
 
   * Added cross-references.
   * Added dictionaries support.
 
  -- August 2020
 
-unboundbible (4.0) ; urgency=medium
+straitbible (4.0) ; urgency=medium
 
   * Best support for interlinear translations.
   * Best support for mybible modules.
 
  -- Mart 2020
 
-unboundbible (3.5) ; urgency=medium
+straitbible (3.5) ; urgency=medium
 
   * Russian module updated.
   * One bug fixed.
@@ -89,44 +89,44 @@ unboundbible (3.5) ; urgency=medium
 
  -- October 2019
 
-unboundbible (3.5) ; urgency=medium
+straitbible (3.5) ; urgency=medium
 
   * Russian module updated.
   * One bug fixed.
 
  -- October 2019
 
-unboundbible (3.4) ; urgency=medium
+straitbible (3.4) ; urgency=medium
 
   * Best support for apocryphal books.
 
  -- September 2019 
 
-unboundbible (3.3) ; urgency=high
+straitbible (3.3) ; urgency=high
 
   * Subscripted strong's nimbers.
 
  -- May 2019 
 
-unboundbible (3.2) ; urgency=high
+straitbible (3.2) ; urgency=high
 
   * One bug fixed.
 
  -- April 2019 
 
-unboundbible (3.1) ; urgency=high
+straitbible (3.1) ; urgency=high
 
   * Quick strong's nimbers.
 
  -- April 2019 
 
-unboundbible (3.0) ; urgency=medium
+straitbible (3.0) ; urgency=medium
 
   * Many features have been added.
 
  -- Mart 2019 
 
-unboundbible (2.01) ; urgency=medium
+straitbible (2.01) ; urgency=medium
 
   * Initial version
 
@@ -140,11 +140,11 @@ Copyright © 2022 Vladimir Rybant <vrybant@gmail.com>
 <</COPYRIGHT>>
 <<MENU>>
 1
-Name=Unbound Bible
+Name=Strait Bible
 Version=1.0
-Exec=/usr/bin/unboundbible
+Exec=/usr/bin/straitbible
 Comment=Open Source Bible Application
-Icon=unboundbible.png
+Icon=straitbible.png
 Type=Application
 Terminal=false
 StartupNotify=true

@@ -1,0 +1,47 @@
+# Builds Strait Bible for Linux (x86_64) and, for a tag such as v1.0, attaches the result to a GitHub release.
+# It only runs when started by hand (Actions tab -> Linux build -> Run workflow) or when a tag is pushed.
+#
+# Not tested yet: if a step fails, the log shows what Lazarus or Free Pascal complained about.
+name: Linux build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lazarus and Free Pascal
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lazarus fpc libgtk2.0-dev libsqlite3-dev
+
+      - name: Get ZeosLib 7.2 (the 8.0 branch needs a newer compiler)
+        run: git clone --depth 1 --branch 7.2.14-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
+
+      - name: Build
+        run: sh packaging/build-linux.sh "$RUNNER_TEMP/zeoslib"
+
+      - name: Install into a folder and pack it
+        run: |
+          sh packaging/install-linux.sh "$PWD/dist" /usr
+          tar -C dist -czf straitbible-linux-x86_64.tar.gz usr
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: straitbible-linux-x86_64
+          path: straitbible-linux-x86_64.tar.gz
+
+      - name: Attach to the release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: straitbible-linux-x86_64.tar.gz

@@ -1,17 +1,17 @@
 
-Name: unboundbible
+Name: straitbible
 Version: 5.4
 Release: 0
 Group: Applications/Education
 Summary: Open Source Bible Application 
 License: GPLv3+
-URL: http://vladimirrybant.org
+URL: https://github.com/doonoo/unboundbible
 
 %define _rpmdir ../SPECS
 %define _rpmfilename %%{NAME}-%%{VERSION}-%%{RELEASE}.%%{ARCH}.rpm
 
 %description
-Unbound Bible is an open source and free, multilingual Bible software.
+Strait Bible is an open source and free, multilingual Bible software, based on Unbound Bible by Vladimir Rybant.
 
 %prep
 

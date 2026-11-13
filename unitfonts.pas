@@ -5,7 +5,7 @@ unit UnitFonts;
 // made available to the application.
 //
 // Windows: fonts are registered privately for this process (nothing is installed).
-// Linux:   fonts are copied to ~/.local/share/fonts/unboundbible and the font cache is
+// Linux:   fonts are copied to ~/.local/share/fonts/straitbible and the font cache is
 //          refreshed; they become visible the next time the application starts.
 
 interface
@@ -45,7 +45,7 @@ end;
 {$ifdef unix}
 function SystemFontsPath: string;
 begin
-  Result := GetUserDir + '.local/share/fonts/unboundbible';
+  Result := GetUserDir + '.local/share/fonts/straitbible';
 end;
 
 procedure RefreshFontCache;

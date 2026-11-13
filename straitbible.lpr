@@ -1,4 +1,4 @@
-program unboundbible;
+program straitbible;
 
 uses
   {$ifdef unix}{$ifdef UseCThreads} cthreads, {$endif}{$endif}
@@ -12,8 +12,8 @@ uses
 begin
   if Tools.Bibles.IsEmpty then Exit;
 
-  Application.Title := 'Unbound Bible';
-  {$ifdef linux} Application.Title := 'unboundbible'; {$endif}
+  Application.Title := 'Strait Bible';
+  {$ifdef linux} Application.Title := 'straitbible'; {$endif}
 
   Application.Initialize;
   Application.CreateForm(TMainForm,    MainForm);

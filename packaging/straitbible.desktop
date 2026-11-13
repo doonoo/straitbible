@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Strait Bible
+GenericName=Bible reader
+Comment=Read, compare and study the Bible
+Exec=straitbible
+Icon=straitbible
+Terminal=false
+Categories=Education;Literature;
+Keywords=Bible;Scripture;Study;Verse;
+StartupNotify=true
+StartupWMClass=straitbible

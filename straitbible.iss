@@ -1,13 +1,13 @@
-﻿; -- unboundbible.iss --
+﻿; -- straitbible.iss --
 ; Inno Setup Script 
                              
-#define MyAppName "Unbound Bible"
+#define MyAppName "Strait Bible"
 #define MyAppCopyright "GNU GPL"
-#define MyAppPublisher "Vladimir Rybant"
-#define MyAppURL "https://unboundbible.net"
-#define MyAppExeName "unboundbible.exe"
+#define MyAppPublisher "Strait Bible contributors (based on Unbound Bible by Vladimir Rybant)"
+#define MyAppURL "https://github.com/doonoo/unboundbible"
+#define MyAppExeName "straitbible.exe"
 #define MyAppVersion "5.4"
-#define MyAppOutput "unboundbible_5.4"
+#define MyAppOutput "straitbible_5.4"
 
 [Setup]
  AppName={#MyAppName}
@@ -43,8 +43,8 @@
  Source: "modules\*.zip"   ; DestDir: "{app}\modules"
  Source: "localization\*"  ; DestDir: "{app}\localization"
 
- Source: "unboundbible_win32.exe" ; DestDir: "{app}" ; DestName: "{#MyAppExeName}"; Flags: ignoreversion ; Check: not Is64BitInstallMode 
- Source: "unboundbible_win64.exe" ; DestDir: "{app}" ; DestName: "{#MyAppExeName}"; Flags: ignoreversion ; Check:     Is64BitInstallMode
+ Source: "straitbible_win32.exe" ; DestDir: "{app}" ; DestName: "{#MyAppExeName}"; Flags: ignoreversion ; Check: not Is64BitInstallMode 
+ Source: "straitbible_win64.exe" ; DestDir: "{app}" ; DestName: "{#MyAppExeName}"; Flags: ignoreversion ; Check:     Is64BitInstallMode
  
  Source: "C:\Windows\SysWOW64\sqlite3.dll" ; DestDir: "{app}" ; Check: not Is64BitInstallMode 
  Source:                     "sqlite3.dll" ; DestDir: "{app}" ; Check:     Is64BitInstallMode

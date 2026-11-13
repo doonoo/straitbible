@@ -1,7 +1,14 @@
-Unbound Bible
-===========
+<p align="center"><img src="straitbible.png" alt="Strait Bible: a scroll behind a gate" width="128"></p>
 
-The Unbound Bible is an open source and a free, multilingual Bible-reader program for Windows, macOS and Linux. This is fast and effective way to explore bibles.
+Strait Bible
+============
+
+Strait Bible is an open source and free, multilingual Bible-reader program for Windows and Linux, to read, compare
+and study the Bible in many translations, with themes, your own fonts and background pictures, bookmarks,
+highlights, notes and reading plans.
+
+The name and the logo, a scroll behind a gate, come from Matthew 7:13-14: *"Enter ye in at the strait gate ...
+strait is the gate, and narrow is the way, which leadeth unto life."*
 
 
 Credits and license
@@ -13,8 +20,15 @@ Bible module formats and the RichMemo based text view that everything here build
 published under the **GNU General Public License v3** (see `LICENSE`), like the original. The original
 copyright notices stay in the source files.
 
-Changes in this fork
---------------------
+Your data and the old name
+--------------------------
+
+Strait Bible keeps working with the folders of Unbound Bible: if a folder `Unbound Bible` (your Bibles,
+notes and modules) or the settings of Unbound Bible already exist on the computer, they keep being used, so
+nothing is lost. A new installation uses folders named `Strait Bible` (Windows) and `~/.config/straitbible` (Linux).
+
+What is new compared to Unbound Bible
+-------------------------------------
 
 **Compare**
 - Next-verse link (`Genesis 1:6 »`) and, new, a previous-verse link (`« Genesis 1:4`) at the top of the Compare page. Going back crosses chapter and book boundaries.
@@ -97,12 +111,16 @@ $ lazbuild components/richmemo/richmemopackage.lpk
 $ lazbuild components/unboundmemo/unboundmemopackage.lpk
 ```
 
-Build unboundbible:
+Build Strait Bible:
 
 ```bash
-$ lazbuild unboundbible.lpr
+$ lazbuild straitbible.lpi
 ```
 
-The binary will be in the current folder.
+The binary (`straitbible_<os>`, for example `straitbible_win64.exe`) will be in the current folder.
+
+Notes: ZeosLib 7.2.x (for example the `7.2.14-stable` branch of
+[marsupilami79/zeoslib](https://github.com/marsupilami79/zeoslib)) builds with Free Pascal 3.2.2; its 8.0 branch needs a newer compiler.
+On Windows the program expects `sqlite3.dll` next to the executable.
 
 
