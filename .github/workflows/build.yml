@@ -5,6 +5,10 @@ name: Build
 
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Which jobs to run: all, linux, macos or arch"
+        default: all
   push:
     tags:
       - 'v*'
@@ -14,6 +18,7 @@ permissions:
 
 jobs:
   linux:
+    if: github.event_name != 'workflow_dispatch' || inputs.only == 'all' || inputs.only == 'linux'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -68,6 +73,7 @@ jobs:
             straitbible_*_amd64.deb
 
   macos:
+    if: github.event_name != 'workflow_dispatch' || inputs.only == 'all' || inputs.only == 'macos'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -88,8 +94,8 @@ jobs:
           sudo ln -sf "$RUNNER_TEMP/lazarus/lazbuild" /usr/local/bin/lazbuild
           fpc -iV
 
-      - name: Get ZeosLib 7.2
-        run: git clone --depth 1 --branch 7.2.14-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
+      - name: Get ZeosLib 8.0 (7.2 does not know the field types of Free Pascal 3.2.4)
+        run: git clone --depth 1 --branch 8.0.0-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
 
       - name: Build
         run: sh packaging/build-macos.sh "$RUNNER_TEMP/zeoslib"
@@ -109,6 +115,7 @@ jobs:
           files: dist/*.dmg
 
   arch:
+    if: github.event_name != 'workflow_dispatch' || inputs.only == 'all' || inputs.only == 'arch'
     # builds the AUR package in a clean Arch Linux, to know that it works before it is uploaded
     runs-on: ubuntu-latest
     container: archlinux:base-devel
