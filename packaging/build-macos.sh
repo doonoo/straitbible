@@ -24,9 +24,8 @@ mkdir -p "$PCP"
 LAZDIR="${LAZARUS_DIR:-/Applications/Lazarus}"
 
 # the Cocoa part of the LCL is not compiled in a fresh Lazarus: build it first
-LCLPK=$(find "$LAZDIR/lcl" -maxdepth 2 -name lcl.lpk | head -1)
-echo "LCL package: $LCLPK"
-lazbuild $LAZ --pcp="$PCP" --ws=cocoa "$LCLPK"
+make -C "$LAZDIR/lcl" LCL_PLATFORM=cocoa PP=fpc
+ls "$LAZDIR/lcl/units/"*/cocoa | head -5
 
 for lpk in \
     "$ZEOS/packages/lazarus/zcomponent.lpk" \
