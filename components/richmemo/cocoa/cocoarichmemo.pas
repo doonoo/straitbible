@@ -7,13 +7,13 @@ interface
 {$modeswitch objectivec2}
 
 uses
-  CocoaAll, Classes, SysUtils, LCLVersion,
+  CocoaAll, Classes, SysUtils,
   LCLType, Graphics, Controls, StdCtrls,
-  {$if lcl_fullversion >= 3990000} // Lazarus 4: CocoaWSCommon is gone, its callback is in CocoaCommonCallback
+  {$ifdef RMLCL3} // Lazarus before 4.0 (define RMLCL3 in the package's custom options for those)
+  CocoaWSCommon,
+  {$else}         // Lazarus 4: CocoaWSCommon is gone, its callback is in CocoaCommonCallback
   {$define RMLCL4}
   CocoaCommonCallback,
-  {$else}
-  CocoaWSCommon,
   {$endif}
   CocoaPrivate, CocoaTextEdits, CocoaUtils, CocoaWSStdCtrls,
   {$ifndef RMLCL18} // it can be defined in the package's CustomOptions -dRMLCL18
