@@ -95,7 +95,11 @@ jobs:
           fpc -iV
 
       - name: Get ZeosLib 8.0 (7.2 does not know the field types of Free Pascal 3.2.4)
-        run: git clone --depth 1 --branch 8.0.0-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
+        run: |
+          git clone --depth 1 --branch 8.0.0-stable https://github.com/marsupilami79/zeoslib.git "$RUNNER_TEMP/zeoslib"
+          # Free Pascal 3.2.4 already has ftSingle and ftShortInt, Zeos expects them from 3.3.0 on
+          sed -i '' 's/{\$IF FPC_FULLVERSION >= 30300}/{$IF FPC_FULLVERSION >= 30204}/' "$RUNNER_TEMP/zeoslib/src/ZeosLazarus.inc"
+          grep -n "FPC_FULLVERSION >= 30204" "$RUNNER_TEMP/zeoslib/src/ZeosLazarus.inc"
 
       - name: Build
         run: sh packaging/build-macos.sh "$RUNNER_TEMP/zeoslib"
