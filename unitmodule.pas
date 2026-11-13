@@ -296,6 +296,8 @@ begin
   if format = mybible then OpenMybibleDatabase;
   if not connected then Exit;
   if name.isEmpty then name := fileName;
+  if abbreviation.isEmpty then // modules without one: use the file name, e.g. NKJV.SQLite3 -> NKJV
+    abbreviation := Copy(fileName, 1, Pos('.', fileName + '.') - 1);
   RightToLeft := IsRightToLeft(language);
   info := RemoveTags(info);
   accented := language = 'ru';
