@@ -48,7 +48,10 @@ for lpk in \
   lazbuild $LAZ --pcp="$PCP" --ws=cocoa "$lpk"
 done
 
-lazbuild $LAZ --pcp="$PCP" --ws=cocoa straitbible.lpi || {
+lazbuild $LAZ --pcp="$PCP" --ws=cocoa straitbible.lpi || \
+lazbuild $LAZ --pcp="$PCP" --ws=cocoa --opt="-k-ld_classic" straitbible.lpi || {
+  echo "--- retrying the link verbosely:"
+  lazbuild $LAZ --pcp="$PCP" --ws=cocoa --opt="-va" straitbible.lpi 2>&1 | grep -v -E '^\((3104|9009)\)' | tail -60
   echo "--- link failed, running the link script to see why:"
   for f in $(find "$ROOT" -maxdepth 5 -name 'ppas.sh' -o -maxdepth 5 -name 'link*.res'); do
     echo "== $f"; head -c 1500 "$f"; echo
