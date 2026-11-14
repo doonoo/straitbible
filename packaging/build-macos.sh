@@ -50,8 +50,11 @@ done
 
 lazbuild $LAZ --pcp="$PCP" --ws=cocoa straitbible.lpi || {
   echo "--- link failed, running the link script to see why:"
-  for f in $(find "$ROOT" -maxdepth 2 -name ppas.sh); do
-    echo "== $f"; head -3 "$f"; sh "$f" 2>&1 | tail -25
+  for f in $(find "$ROOT" -maxdepth 5 -name 'ppas.sh' -o -maxdepth 5 -name 'link*.res'); do
+    echo "== $f"; head -c 1500 "$f"; echo
+  done
+  for f in $(find "$ROOT" -maxdepth 5 -name ppas.sh); do
+    echo "== running $f"; (cd "$(dirname "$f")" && sh "$f" 2>&1 | tail -30)
   done
   ld -v 2>&1 | head -3; xcodebuild -version 2>&1 | head -2
   exit 1
