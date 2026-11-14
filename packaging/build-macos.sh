@@ -48,5 +48,12 @@ for lpk in \
   lazbuild $LAZ --pcp="$PCP" --ws=cocoa "$lpk"
 done
 
-lazbuild $LAZ --pcp="$PCP" --ws=cocoa straitbible.lpi
+lazbuild $LAZ --pcp="$PCP" --ws=cocoa straitbible.lpi || {
+  echo "--- link failed, running the link script to see why:"
+  for f in $(find "$ROOT" -maxdepth 2 -name ppas.sh); do
+    echo "== $f"; head -3 "$f"; sh "$f" 2>&1 | tail -25
+  done
+  ld -v 2>&1 | head -3; xcodebuild -version 2>&1 | head -2
+  exit 1
+}
 ls -la "$ROOT"/straitbible_darwin
