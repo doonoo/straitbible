@@ -11,7 +11,7 @@ const
                                   // a folder with this name that already exists keeps being used
   ProjectURL = 'https://github.com/doonoo/straitbible';
   OriginalURL = 'https://github.com/vrybant/unboundbible';
-  ApplicationVersion = '6.2';
+  ApplicationVersion = '6.3';
   LangDirectory = 'localization';
   Untitled = 'Untitled';
   RecentMax = 10;
@@ -57,10 +57,28 @@ end;
 
 // The folder of the Bibles. People who used "Unbound Bible" before keep their folder (and their
 // Bibles, notes and settings); new users get a folder named after this program.
+{$ifdef unix}
+function InFlatpak: boolean;
+begin
+  Result := GetEnvironmentVariable('FLATPAK_ID') <> '';
+end;
+
+function XdgDir(const EnvName, Fallback: string): string;
+begin
+  Result := GetEnvironmentVariable(EnvName);
+  if Result = '' then Result := GetUserDir + Fallback;
+  Result := IncludeTrailingPathDelimiter(Result);
+end;
+{$endif}
+
 function DataPath: string;
 begin
   if IsPortable then
     Result := PortableDataPath
+  {$ifdef unix}
+  else if InFlatpak then
+    Result := XdgDir('XDG_DATA_HOME', '.local/share') + 'straitbible'   // inside the Flatpak sandbox
+  {$endif}
   else
     begin
       Result := GetUserDir + ApplicationName;
@@ -90,6 +108,13 @@ function ConfigPath: string;
 begin
   if IsPortable then
     Result := Application.Location + Slash + 'configs'
+  {$ifdef unix}
+  else if InFlatpak then
+    begin
+      Result := XdgDir('XDG_CONFIG_HOME', '.config') + 'straitbible';
+      ForceDirectories(Result);
+    end
+  {$endif}
   else
     begin
       {$ifdef windows}

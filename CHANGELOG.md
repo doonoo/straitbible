@@ -1,5 +1,10 @@
 # Changes
 
+## 6.3
+
+- Runs inside a Flatpak sandbox: data and settings go to the XDG folders there (`~/.var/app/io.github.doonoo.StraitBible`).
+- The desktop file and icons are named after the application id (`io.github.doonoo.StraitBible`).
+
 ## 6.2
 
 First release with the macOS build working (Apple Silicon `.dmg`), together with the Linux `.tar.gz`/`.deb` and the

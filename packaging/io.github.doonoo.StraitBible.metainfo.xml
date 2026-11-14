@@ -5,7 +5,9 @@
   <summary>Read, compare and study the Bible</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
-  <developer_name>Strait Bible contributors</developer_name>
+  <developer id="io.github.doonoo">
+    <name>Strait Bible contributors</name>
+  </developer>
   <description>
     <p>
       Strait Bible is a free, multilingual Bible reader. It is based on Unbound Bible by Vladimir Rybant.
@@ -18,8 +20,15 @@
       <li>Reading plans, verse of the day and a night theme</li>
     </ul>
   </description>
-  <launchable type="desktop-id">straitbible.desktop</launchable>
+  <launchable type="desktop-id">io.github.doonoo.StraitBible.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/doonoo/straitbible/v6.3/packaging/screenshots/main.png</image>
+      <caption>Reading Genesis in the King James Version</caption>
+    </screenshot>
+  </screenshots>
   <releases>
+    <release version="6.3" date="2026-11-14"/>
     <release version="6.2" date="2026-11-14"/>
     <release version="6.1" date="2026-11-13"/>
     <release version="6.0" date="2026-11-13"/>

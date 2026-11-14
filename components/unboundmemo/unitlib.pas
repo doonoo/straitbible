@@ -375,7 +375,8 @@ function SharePath: string;
 begin
   Result := Application.Location;
   {$ifdef linux}
-    if Prefix('/usr',Result) then Result := '/usr/share/' + Application.Title + '/';
+    if Prefix('/usr',Result) then Result := '/usr/share/' + Application.Title + '/'
+    else if Prefix('/app',Result) then Result := '/app/share/' + Application.Title + '/';  // Flatpak
   {$endif}
   {$ifdef darwin}
     // inside an application bundle the data is in Contents/Resources, next to Contents/MacOS

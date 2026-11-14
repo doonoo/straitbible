@@ -6,7 +6,7 @@ What is in this folder:
 |---|---|
 | `build-linux.sh` | builds the program with `lazbuild` (GTK2) from a clean checkout |
 | `install-linux.sh` | installs the built program into `DESTDIR`/`PREFIX` (binary, modules, translations, icons, desktop file) |
-| `straitbible.desktop` | menu entry |
+| `io.github.doonoo.StraitBible.desktop` | menu entry |
 | `io.github.doonoo.StraitBible.metainfo.xml` | AppStream data (needed by software centers, Flathub, ...) |
 | `arch/PKGBUILD` | AUR package (`straitbible-git`, builds the latest commit) |
 | `../straitbible.spec`, `../straitbible.dbp` | the rpm spec and the Debreate project that came with Unbound Bible (renamed, still to be updated) |

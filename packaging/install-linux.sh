@@ -19,11 +19,12 @@ cp -r "$ROOT"/modules/*.zip "$SHARE/straitbible/modules/"
 cp -r "$ROOT"/localization/*.lng "$SHARE/straitbible/localization/"
 cp -r "$ROOT"/titles/. "$SHARE/straitbible/titles/"
 
-install -Dm644 "$ROOT/packaging/straitbible.desktop" "$SHARE/applications/straitbible.desktop"
+ID=io.github.doonoo.StraitBible   # desktop file and icons are named after the application id (needed by Flathub)
+install -Dm644 "$ROOT/packaging/$ID.desktop" "$SHARE/applications/$ID.desktop"
 install -Dm644 "$ROOT/packaging/io.github.doonoo.StraitBible.metainfo.xml" \
   "$SHARE/metainfo/io.github.doonoo.StraitBible.metainfo.xml"
-install -Dm644 "$ROOT/straitbible.svg" "$SHARE/icons/hicolor/scalable/apps/straitbible.svg"
-install -Dm644 "$ROOT/straitbible.png" "$SHARE/icons/hicolor/256x256/apps/straitbible.png"
+install -Dm644 "$ROOT/straitbible.svg" "$SHARE/icons/hicolor/scalable/apps/$ID.svg"
+install -Dm644 "$ROOT/straitbible.png" "$SHARE/icons/hicolor/256x256/apps/$ID.png"
 install -Dm644 "$ROOT/LICENSE" "$SHARE/licenses/straitbible/LICENSE"
 
 echo "installed into $DESTDIR$PREFIX"
