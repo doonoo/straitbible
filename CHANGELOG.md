@@ -1,5 +1,11 @@
 # Changes
 
+## 6.1
+
+- New macOS build (Apple Silicon `.dmg`, signed ad hoc) and a Linux `.deb`, built automatically by GitHub Actions.
+- Packages for Arch Linux (AUR: `straitbible-git`, `straitbible`).
+- The RichMemo Cocoa backend follows the Lazarus 4 Cocoa units.
+
 ## 6.0 - Strait Bible
 
 The program is now called **Strait Bible** and has a logo of its own, a gate with a scroll behind it. It is based on

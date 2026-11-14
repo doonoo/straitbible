@@ -20,6 +20,7 @@
   </description>
   <launchable type="desktop-id">straitbible.desktop</launchable>
   <releases>
+    <release version="6.1" date="2026-11-13"/>
     <release version="6.0" date="2026-11-13"/>
   </releases>
   <url type="homepage">https://github.com/doonoo/straitbible</url>

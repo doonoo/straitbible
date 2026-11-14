@@ -14,7 +14,7 @@ strait is the gate, and narrow is the way, which leadeth unto life."*
 Download
 --------
 
-Version 6.0 is on the [Releases page](https://github.com/doonoo/straitbible/releases): a portable zip for
+Version 6.1 is on the [Releases page](https://github.com/doonoo/straitbible/releases): a portable zip for
 Windows (unzip and run `straitbible.exe`) and a build for Linux (`straitbible-linux-x86_64.tar.gz`, not tested yet).
 More translations: the `modules` folder of this repository.
 

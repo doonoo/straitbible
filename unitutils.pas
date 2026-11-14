@@ -11,7 +11,7 @@ const
                                   // a folder with this name that already exists keeps being used
   ProjectURL = 'https://github.com/doonoo/straitbible';
   OriginalURL = 'https://github.com/vrybant/unboundbible';
-  ApplicationVersion = '6.0';
+  ApplicationVersion = '6.1';
   LangDirectory = 'localization';
   Untitled = 'Untitled';
   RecentMax = 10;
