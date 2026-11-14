@@ -1,5 +1,10 @@
 # Changes
 
+## 6.2
+
+First release with the macOS build working (Apple Silicon `.dmg`), together with the Linux `.tar.gz`/`.deb` and the
+Arch packages.
+
 ## 6.1
 
 - New macOS build (Apple Silicon `.dmg`, signed ad hoc) and a Linux `.deb`, built automatically by GitHub Actions.
