@@ -70,6 +70,19 @@ type
 
 implementation
 
+{$ifdef RMLCL4}
+// the colour helpers of older Lazarus versions are now class functions of TCocoaColorUtil
+function NSColorToColorRef(const c: NSColor): TColorRef;
+begin
+  Result := TCocoaColorUtil.toColorRefWithAnyColor(c);
+end;
+
+function ColorToNSColor(const c: TColorRef): NSColor;
+begin
+  Result := TCocoaColorUtil.toColor(c);
+end;
+{$endif}
+
 function MemoTextView(AWinControl: TWinControl): TCocoaTextView;
 begin
   if not Assigned(AWinControl) or (AWinControl.Handle=0) then
