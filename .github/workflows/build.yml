@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "Which jobs to run: all, linux, macos, arch or flatpak"
+        description: "Which jobs to run: all, linux, macos, arch or deb"
         default: all
   push:
     tags:
@@ -145,32 +145,52 @@ jobs:
         with:
           files: dist/*.dmg
 
-  flatpak:
-    # builds packaging/flatpak from the Linux tarball of the release, and starts the program once; run it by hand
-    if: github.event_name == 'workflow_dispatch' && inputs.only == 'flatpak'
-    runs-on: ubuntu-24.04
+  deb:
+    # Debian source packages for the Launchpad PPA (unsigned, they are signed and uploaded by hand), and a test build
+    if: github.event_name == 'workflow_dispatch' && inputs.only == 'deb'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - series: jammy
+            runner: ubuntu-22.04
+          - series: noble
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install flatpak-builder
+      - name: Install the build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder xvfb
-          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          sudo apt-get install -y devscripts debhelper dpkg-dev fakeroot fpc lazarus libgtk2.0-dev libsqlite3-dev
 
-      - name: Build
-        working-directory: packaging/flatpak
-        run: |
-          git clone --depth 1 https://github.com/flathub/shared-modules.git shared-modules
-          flatpak-builder --user --install-deps-from=flathub --force-clean --install build io.github.doonoo.StraitBible.yml
+      - name: Source package for ${{ matrix.series }}
+        run: sh packaging/debian/make-source.sh ${{ matrix.series }} "$PWD/ppa-out"
 
-      - name: Start the program for a few seconds (virtual display)
+      - name: Test build of the binary package
         run: |
-          set +e
-          timeout 20 xvfb-run -a flatpak run io.github.doonoo.StraitBible
-          code=$?
-          echo "exit code: $code (124 means it was still running when stopped, which is good)"
-          [ $code -eq 124 ]
+          cd "$RUNNER_TEMP"
+          dpkg-source -x "$GITHUB_WORKSPACE"/ppa-out/straitbible_*.dsc src
+          cd src
+          dpkg-buildpackage -b -us -uc
+          dpkg-deb --info ../straitbible_*_amd64.deb
+          dpkg-deb --contents ../straitbible_*_amd64.deb | head -30
+
+      - name: Keep the source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ppa-source-${{ matrix.series }}
+          path: ppa-out/*
+
+      - name: Stage the source package on a pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ppa-staging
+          prerelease: true
+          name: PPA staging (source packages, unsigned)
+          body: Unsigned Debian source packages for the Launchpad PPA. Not for users.
+          files: ppa-out/*
 
   arch:
     if: github.event_name != 'workflow_dispatch' || inputs.only == 'all' || inputs.only == 'arch'

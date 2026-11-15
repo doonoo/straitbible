@@ -24,7 +24,7 @@ maintainer (you) - nobody else can do it for you.
 |---|---|---|---|
 | **AUR** (Arch, Manjaro, EndeavourOS) | Arch based systems, through `yay` / `paru` | an AUR account and an SSH key | `git clone ssh://aur@aur.archlinux.org/straitbible-git.git`, copy `arch/PKGBUILD`, run `makepkg --printsrcinfo > .SRCINFO`, commit and push. Test first with `makepkg -s` in a clean chroot (`extra-x86_64-build`). |
 | **GitHub Releases** (no account besides GitHub) | everybody, as a download | the GitHub repository | attach a `.tar.gz` of the built program (and an AppImage, see below) to a release |
-| **Flathub** (Flatpak) | every distribution | a pull request to `flathub/flathub`, a manifest | needs a manifest that builds Free Pascal / Lazarus inside the Flatpak sandbox (heavy) or uses a prebuilt binary from a release; the app id is `io.github.doonoo.StraitBible` |
+| **Flathub** (Flatpak) | every distribution | a pull request to `flathub/flathub`, a manifest | tried once (PR 11194) and closed: Flathub requires the author to confirm a checklist and show a video, and has a policy about AI-assisted submissions; not pursued |
 | **Snap Store** | Ubuntu and others | a Snapcraft account | `snapcraft.yaml` with a Lazarus build part |
 | **Debian / Ubuntu** | the `.deb` family | for the official archive: a sponsor (mentors.debian.net); for your own repository: a Launchpad account (PPA) | `debian/` directory (control, rules, changelog, copyright); the old `straitbible.dbp` has the control data |
 | **Fedora** | Fedora, RHEL family | a Fedora account, a package review; or COPR for a repository of your own | `straitbible.spec` (needs the build steps filled in) |

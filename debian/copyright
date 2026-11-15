@@ -1,0 +1,32 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Strait Bible
+Source: https://github.com/doonoo/straitbible
+
+Files: *
+Copyright: 2015-2025 Vladimir Rybant (Unbound Bible)
+           2026 Strait Bible contributors
+License: GPL-3+
+
+Files: components/richmemo/*
+Copyright: Dmitry Boyarintsev and contributors
+License: LGPL-2+ with linking exception
+ See the files in components/richmemo.
+
+Files: components/zeosdb/*
+Copyright: ZeosLib Development Group
+License: LGPL-2.1 with linking exception
+ ZeosLib (version 7.2) is included in the source package because it is not in
+ Debian or Ubuntu. See components/zeosdb/COPYING* for the exact terms.
+
+Files: modules/*
+Copyright: see the notes inside each module file
+License: public-domain or as stated in the module
+ The Bible modules are the ones that Unbound Bible shipped.
+
+License: GPL-3+
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation, either version 3 of the License, or (at your option)
+ any later version.
+ .
+ On Debian systems the full text is in /usr/share/common-licenses/GPL-3.

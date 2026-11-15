@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+# Launchpad builds without a network: ZeosLib is part of the source package (components/zeosdb),
+# see packaging/debian/make-source.sh.
+
+export HOME = $(CURDIR)/debian/tmp-home
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	mkdir -p $(HOME)
+	sh packaging/build-linux.sh $(CURDIR)/components/zeosdb
+
+override_dh_auto_install:
+	sh packaging/install-linux.sh $(CURDIR)/debian/straitbible /usr
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+	rm -rf lib components/*/lib components/zeosdb/packages/lazarus/lib .lazarus-config straitbible_linux debian/tmp-home
