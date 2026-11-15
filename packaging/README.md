@@ -26,7 +26,7 @@ maintainer (you) - nobody else can do it for you.
 | **GitHub Releases** (no account besides GitHub) | everybody, as a download | the GitHub repository | attach a `.tar.gz` of the built program (and an AppImage, see below) to a release |
 | **Flathub** (Flatpak) | every distribution | a pull request to `flathub/flathub`, a manifest | tried once (PR 11194) and closed: Flathub requires the author to confirm a checklist and show a video, and has a policy about AI-assisted submissions; not pursued |
 | **Snap Store** | Ubuntu and others | a Snapcraft account | `snapcraft.yaml` with a Lazarus build part |
-| **Debian / Ubuntu** | the `.deb` family | for the official archive: a sponsor (mentors.debian.net); for your own repository: a Launchpad account (PPA) | `debian/` directory (control, rules, changelog, copyright); the old `straitbible.dbp` has the control data |
+| **Debian / Ubuntu** | the `.deb` family | only the `.deb` on the GitHub release is provided; a PPA or the official archive (a sponsor is needed) was considered and not pursued | needs a `debian/` directory with the ZeosLib sources included (Ubuntu has no package of it) |
 | **Fedora** | Fedora, RHEL family | a Fedora account, a package review; or COPR for a repository of your own | `straitbible.spec` (needs the build steps filled in) |
 | **openSUSE Build Service** | openSUSE, and it can build for many distributions | an OBS account | spec or Debian files |
 | **Nixpkgs, Gentoo overlay, ...** | Nix, Gentoo users | a pull request | a package description in the format of the distribution |

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "Which jobs to run: all, linux, macos, arch or deb"
+        description: "Which jobs to run: all, linux, macos or arch"
         default: all
   push:
     tags:
@@ -144,53 +144,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.dmg
-
-  deb:
-    # Debian source packages for the Launchpad PPA (unsigned, they are signed and uploaded by hand), and a test build
-    if: github.event_name == 'workflow_dispatch' && inputs.only == 'deb'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - series: jammy
-            runner: ubuntu-22.04
-          - series: noble
-            runner: ubuntu-24.04
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install the build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y devscripts debhelper dpkg-dev fakeroot fpc lazarus libgtk2.0-dev libsqlite3-dev
-
-      - name: Source package for ${{ matrix.series }}
-        run: sh packaging/debian/make-source.sh ${{ matrix.series }} "$PWD/ppa-out"
-
-      - name: Test build of the binary package
-        run: |
-          cd "$RUNNER_TEMP"
-          dpkg-source -x "$GITHUB_WORKSPACE"/ppa-out/straitbible_*.dsc src
-          cd src
-          dpkg-buildpackage -b -us -uc
-          dpkg-deb --info ../straitbible_*_amd64.deb
-          dpkg-deb --contents ../straitbible_*_amd64.deb | head -30
-
-      - name: Keep the source package
-        uses: actions/upload-artifact@v4
-        with:
-          name: ppa-source-${{ matrix.series }}
-          path: ppa-out/*
-
-      - name: Stage the source package on a pre-release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ppa-staging
-          prerelease: true
-          name: PPA staging (source packages, unsigned)
-          body: Unsigned Debian source packages for the Launchpad PPA. Not for users.
-          files: ppa-out/*
 
   arch:
     if: github.event_name != 'workflow_dispatch' || inputs.only == 'all' || inputs.only == 'arch'
