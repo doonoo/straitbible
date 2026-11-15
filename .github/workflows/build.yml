@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       only:
-        description: "Which jobs to run: all, linux, macos or arch"
+        description: "Which jobs to run: all, linux, macos, arch or flatpak"
         default: all
   push:
     tags:
@@ -144,6 +144,33 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.dmg
+
+  flatpak:
+    # builds packaging/flatpak from the Linux tarball of the release, and starts the program once; run it by hand
+    if: github.event_name == 'workflow_dispatch' && inputs.only == 'flatpak'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder xvfb
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Build
+        working-directory: packaging/flatpak
+        run: |
+          git clone --depth 1 https://github.com/flathub/shared-modules.git shared-modules
+          flatpak-builder --user --install-deps-from=flathub --force-clean --install build io.github.doonoo.StraitBible.yml
+
+      - name: Start the program for a few seconds (virtual display)
+        run: |
+          set +e
+          timeout 20 xvfb-run -a flatpak run io.github.doonoo.StraitBible
+          code=$?
+          echo "exit code: $code (124 means it was still running when stopped, which is good)"
+          [ $code -eq 124 ]
 
   arch:
     if: github.event_name != 'workflow_dispatch' || inputs.only == 'all' || inputs.only == 'arch'
