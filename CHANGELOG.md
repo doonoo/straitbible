@@ -1,5 +1,9 @@
 # Changes
 
+## 6.4
+
+- Import of e-Sword Bibles: Modules window -> Import, choose one or more `.bblx` files (usually in `C:\ProgramData\e-Sword`). They are converted and added at once. Modules that e-Sword encrypts (most of those it downloads itself) cannot be imported and are reported as such.
+
 ## 6.3
 
 - Runs inside a Flatpak sandbox: data and settings go to the XDG folders there (`~/.var/app/io.github.doonoo.StraitBible`).

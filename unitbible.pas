@@ -78,6 +78,7 @@ type
     function IsEmpty: boolean;
     function GetDefaultBible: string;
     function DeleteItem(Item: TBible): boolean;
+    function AddFile(const FilePath: string): TBible;
   end;
 
 implementation
@@ -728,6 +729,28 @@ begin
   Item.Free;
   Delete(IndexOf(Item));
   Exit(true);
+end;
+
+// a module that was added while the program is running (imported from e-Sword)
+function TBibles.AddFile(const FilePath: string): TBible;
+var
+  IniFile : TIniFile;
+begin
+  Result := TBible.Create(FilePath);
+  if not Result.connected then
+    begin
+      Result.Free;
+      Exit(nil);
+    end;
+  Add(Result);
+  CheckDoubleNames;
+  Sort(Comparison);
+  IniFile := TIniFile.Create(ModulesFile);
+  try
+    Result.ReadPrivate(IniFile);
+  finally
+    IniFile.Free;
+  end;
 end;
 
 procedure TBibles.SavePrivates;

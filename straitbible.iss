@@ -1,4 +1,4 @@
-﻿; -- straitbible.iss --
+; -- straitbible.iss --
 ; Inno Setup Script 
                              
 #define MyAppName "Strait Bible"
@@ -6,8 +6,8 @@
 #define MyAppPublisher "Strait Bible contributors (based on Unbound Bible by Vladimir Rybant)"
 #define MyAppURL "https://github.com/doonoo/straitbible"
 #define MyAppExeName "straitbible.exe"
-#define MyAppVersion "6.3"
-#define MyAppOutput "straitbible_6.3"
+#define MyAppVersion "6.4"
+#define MyAppOutput "straitbible_6.4"
 
 [Setup]
  AppName={#MyAppName}

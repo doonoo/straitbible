@@ -238,17 +238,26 @@ object ShelfForm: TShelfForm
   object ButtonOpen: TButton
     Left = 516
     Height = 26
-    Top = 296
+    Top = 288
     Width = 90
     Caption = 'Open'
     ModalResult = 1
     OnClick = ButtonOpenClick
     TabOrder = 2
   end
+  object ButtonImport: TButton
+    Left = 516
+    Height = 26
+    Top = 320
+    Width = 90
+    Caption = 'Import'
+    OnClick = ButtonImportClick
+    TabOrder = 6
+  end
   object ButtonDelete: TButton
     Left = 516
     Height = 26
-    Top = 336
+    Top = 352
     Width = 90
     Caption = 'Delete'
     OnClick = ButtonDeleteClick
@@ -257,7 +266,7 @@ object ShelfForm: TShelfForm
   object ButtonClose: TButton
     Left = 516
     Height = 26
-    Top = 376
+    Top = 384
     Width = 90
     Caption = 'Close'
     ModalResult = 11

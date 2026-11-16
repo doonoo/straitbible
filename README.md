@@ -14,7 +14,7 @@ strait is the gate, and narrow is the way, which leadeth unto life."*
 Download
 --------
 
-Version 6.3 is on the [Releases page](https://github.com/doonoo/straitbible/releases): a portable zip for
+Version 6.4 is on the [Releases page](https://github.com/doonoo/straitbible/releases): a portable zip for
 Windows (unzip and run `straitbible.exe`) and a build for Linux (`straitbible-linux-x86_64.tar.gz`, not tested yet).
 More translations: the `modules` folder of this repository.
 
@@ -43,6 +43,9 @@ What is new compared to Unbound Bible
 **Copy Verses**
 - *Translation name* option appends the translation name to the copied reference.
 - *Abbreviate translation name* option uses the translation's abbreviation instead (e.g. `NKJV`). Modules without an abbreviation of their own use their file name (`NKJV.SQLite3` gives `NKJV`).
+
+**Modules**
+- *Import* button in the Modules window converts e-Sword Bibles (`.bblx`, found in `C:\ProgramData\e-Sword`) to the format of this program and adds them at once. Modules that e-Sword encrypts (most of those it downloads itself) cannot be imported; the program says so.
 
 **Bookmarks and reading**
 - *Bookmarks* menu (between Notes and Help): *Add bookmark* (Ctrl+D) saves the current verse, the saved verses are listed in the menu and open when clicked, and *Remove* deletes one. Bookmarks are kept in the `[Bookmarks]` section of `config.ini`.

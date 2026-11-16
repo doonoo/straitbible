@@ -14,6 +14,7 @@ type
     ButtonDelete: TButton;
     ButtonOpen: TButton;
     ButtonExtract: TButton;
+    ButtonImport: TButton;
     Images: TImageList;
     LabelFile: TLabel;
     LabelFilename: TLabel;
@@ -31,6 +32,7 @@ type
     ButtonClose: TButton;
     procedure ButtonDeleteClick(Sender: TObject);
     procedure ButtonOpenClick(Sender: TObject);
+    procedure ButtonImportClick(Sender: TObject);
     procedure ButtonFolderClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormPaint(Sender: TObject);
@@ -57,7 +59,7 @@ implementation
 
 uses
   UnitTools, UnitUtils, UnitLocal, UnitBible, UnitCommentary,
-    UnitDictionary, UnitReference;
+    UnitDictionary, UnitReference, UnitESword;
 
 {$R *.lfm}
 
@@ -86,6 +88,9 @@ begin
 
   LabelFile.Caption := T('File Name') + ' : ';
   ButtonOpen.Caption := T('Open');
+  ButtonImport.Caption := T('Import');
+  ButtonImport.Hint := T('Import Bibles from e-Sword (.bblx)');
+  ButtonImport.ShowHint := True;
   ButtonDelete.Caption := T('Delete');
   ButtonClose.Caption := T('Close');
 end;
@@ -262,6 +267,68 @@ end;
 procedure TShelfForm.ButtonOpenClick(Sender: TObject);
 begin
   Tools.SetCurrBible(CurrModule as TBible);
+end;
+
+// Bible modules of e-Sword (.bblx) are converted to the format of this program and added to the list.
+procedure TShelfForm.ButtonImportClick(Sender: TObject);
+var
+  Dlg : TOpenDialog;
+  f, Target, report, line : string;
+  Bible, Last : TBible;
+  ok, encrypted : integer;
+begin
+  Dlg := TOpenDialog.Create(Self);
+  try
+    Dlg.Title := T('Import Bibles from e-Sword (.bblx)');
+    Dlg.Filter := 'e-Sword (*.bblx)|*.bblx;*.BBLX|*.*|*.*';
+    Dlg.Options := Dlg.Options + [ofAllowMultiSelect, ofFileMustExist];
+    {$ifdef windows}
+      if DirectoryExists('C:\ProgramData\e-Sword') then Dlg.InitialDir := 'C:\ProgramData\e-Sword'
+      else if DirectoryExists(DocumentsPath + 'eSword') then Dlg.InitialDir := DocumentsPath + 'eSword';
+    {$endif}
+    if not Dlg.Execute then Exit;
+
+    CreateDataDirectory;
+    report := '';
+    ok := 0;
+    encrypted := 0;
+    Last := nil;
+
+    for f in Dlg.Files do
+      begin
+        line := ExtractFileName(f);
+        case ImportESwordBible(f, DataPath, Target) of
+          irOk :
+            begin
+              Inc(ok);
+              Bible := Tools.Bibles.AddFile(Target);
+              if Bible <> nil then Last := Bible;
+            end;
+          irEncrypted :
+            begin
+              Inc(encrypted);
+              report += line + ' - ' + T('the text is encrypted by e-Sword and cannot be imported') + LineBreak;
+            end;
+          irExists   : report += line + ' - ' + T('already imported') + LineBreak;
+          irNotModule: report += line + ' - ' + T('not a Bible module') + LineBreak;
+          else         report += line + ' - ' + T('cannot be imported') + LineBreak;
+        end;
+      end;
+
+    LoadGrids;
+    if Last <> nil then
+      begin
+        PageControl.ActivePageIndex := apBible;
+        BiblesGrid.Row := Tools.Bibles.IndexOf(Last) + 1;
+      end;
+    ShowDetails;
+
+    line := T('Imported') + ': ' + ToStr(ok);
+    if report <> '' then line += LineBreak + LineBreak + report;
+    QuestionDlg(' ' + T('Import'), line, mtInformation, [mrOk, T('Close')], 0);
+  finally
+    Dlg.Free;
+  end;
 end;
 
 end.

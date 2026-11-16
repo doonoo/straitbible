@@ -1,6 +1,6 @@
 
 Name: straitbible
-Version: 6.3
+Version: 6.4
 Release: 0
 Group: Applications/Education
 Summary: Open Source Bible Application 
